@@ -1,14 +1,9 @@
 
 // Save jQuery in custom variable
-window.trEmbJQ = jQuery.noConflict(true);
-
-// Avoid console errors when not supported
-if (typeof window.console === "undefined" || typeof window.console.log === "undefined") {
-    window.console = { log: function() {} };
-}
+trEmbJQ = jQuery.noConflict(true);
 
 // Immediately invoked function expression (IIFE)
-window.tradableEmbed = (function($){
+(function($){
     // It's good practice
     'use strict';
 
@@ -25,6 +20,11 @@ window.tradableEmbed = (function($){
      * <pre>window.tradableEmbedConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-embed-core")</pre>
      * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
 	 *//**/
+
+
+    // Avoid console errors when not supported
+    if (typeof console === "undefined" || typeof console.log === "undefined") 
+        console = { log: function() {} };
     
     var jsVersion = "js-trEmbDevVersionX";
     var appId;
@@ -38,12 +38,12 @@ window.tradableEmbed = (function($){
         }
     } else {
         var scriptId = "tradable-embed";
-        if($('#' + scriptId).length == 0) { // Backwards compatibility
+        if($('#' + scriptId).length === 0) { // Backwards compatibility
             scriptId = "tradable-api";
         }
         appId = $('#'+scriptId).attr("data-app-id");
         customOAuthUrl = $('#'+scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
-        var rURI = $('#'+scriptId).attr("data-redirect-uri")
+        var rURI = $('#'+scriptId).attr("data-redirect-uri");
         if(!!rURI) {
             redirectUrl = rURI;
         }
@@ -99,12 +99,12 @@ window.tradableEmbed = (function($){
         availableCategories : [],
         availableInstruments : [],
         availableSymbols : [],
-		availableCurrencies : [],
-		lastSnapshot: null,
-		symbolKeysForAccountUpdates: [],
-		accountUpdateInterval: null,
-		accountUpdateMillis: 700,
-		/**
+        availableCurrencies : [],
+        lastSnapshot: null,
+        symbolKeysForAccountUpdates: [],
+        accountUpdateInterval: null,
+        accountUpdateMillis: 700,
+        /**
          * Start oauth flow within the page
          * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
@@ -212,8 +212,8 @@ window.tradableEmbed = (function($){
                 return;
             }
             var symbolKey = symbolToAdd + ":" + updateClientId;
-            if($.inArray(symbolKey, tradableEmbed.symbolKeysForAccountUpdates) === -1
-                    && $.inArray(symbolToAdd, tradableEmbed.availableSymbols) !== -1) {
+            if($.inArray(symbolKey, tradableEmbed.symbolKeysForAccountUpdates) === -1 &&
+                $.inArray(symbolToAdd, tradableEmbed.availableSymbols) !== -1) {
                 tradableEmbed.symbolKeysForAccountUpdates.push(symbolKey);
             }
         },
@@ -351,6 +351,7 @@ window.tradableEmbed = (function($){
             if(!!tradableEmbed.accountMap[accountId]) {
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
                 tradableEmbed.selectedAccountId = accountId;
+                console.log('accountId is set to: ' + accountId);
                 return initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
@@ -370,7 +371,6 @@ window.tradableEmbed = (function($){
                         reject(err);
                     }
                 });
-                console.log('accountId is set to: ' + accountId);
             } else {
                 console.error("Can't set account id to: " + accountId);
             }
@@ -468,8 +468,8 @@ window.tradableEmbed = (function($){
                 tradableEmbed.accounts.splice(0, tradableEmbed.accounts.length);
                 tradableEmbed.accountMap = {};
                 $(data.accounts).each(function(index, account){
-                   if (!!account.uniqueId && account.uniqueId !== "NA"
-                        && tradableEmbed.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
+                   if (!!account.uniqueId && account.uniqueId !== "NA" &&
+                        tradableEmbed.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
                        tradableEmbed.accounts.push(account);
                        tradableEmbed.accountMap[account.uniqueId] = account;
                    }
@@ -1152,8 +1152,6 @@ window.tradableEmbed = (function($){
     };
     
     initializeLibrary();
-	
-    return tradableEmbed;
 
     function initializeLibrary(){
         var success = false;
@@ -1176,10 +1174,10 @@ window.tradableEmbed = (function($){
                     success = processHashFragment(hashFragment, tradableEmbed);
                 }
             }
-        } else if(window.location.hash 
-                    && (window.location.hash.indexOf("access_token") !== -1 
-                    && window.location.hash.indexOf("endpointURL") !== -1
-                    && window.location.hash.indexOf("expires_in") !== -1)) {
+        } else if(window.location.hash &&
+                    window.location.hash.indexOf("access_token") !== -1 &&
+                    window.location.hash.indexOf("endpointURL") !== -1 &&
+                    window.location.hash.indexOf("expires_in") !== -1) {
             success = processHashFragment(window.location.hash, tradableEmbed);
         } else if(tradableEmbed.tradingEnabled) {
             validateToken();
@@ -1244,8 +1242,8 @@ window.tradableEmbed = (function($){
         var wTop = window.screenTop ? window.screenTop : window.screenY;
         var left = wLeft + (window.innerWidth / 2) - (w / 2);
         var top = wTop + (window.innerHeight / 2) - (h / 2);
-        return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, '
-            + 'scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+        return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, ' +
+            'scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
     }
 
     function notifyReadyCallbacks() {
@@ -1299,12 +1297,12 @@ window.tradableEmbed = (function($){
                  if(instrument.type === "FOREX" && instrument.symbol.length === 6) {
                      var ccy1 = instrument.symbol.toLowerCase().substring(0, 3);
                      var ccy2 = instrument.symbol.toLowerCase().substring(3, 6);
-                     if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1
-                            && $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
+                     if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1 &&
+                            $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
                          tradableEmbed.availableCurrencies.push(ccy1);
                      }
-                     if ($.inArray(ccy2, tradableEmbed.availableCurrencies) === -1
-                             && $.inArray(ccy1, nonValidCurrencies) === -1){
+                     if ($.inArray(ccy2, tradableEmbed.availableCurrencies) === -1 &&
+                            $.inArray(ccy1, nonValidCurrencies) === -1){
                          tradableEmbed.availableCurrencies.push(ccy2);
                      }
                  }
@@ -1353,13 +1351,12 @@ window.tradableEmbed = (function($){
         console.log('Accounts initialized');
         var accountId;
         var savedAccId = localStorage.getItem("selectedAccount:"+appId);
+        var accIdxToSelect = tradableEmbed.accounts.length - 1;
         if(!!set_latest_account && tradableEmbed.accounts.length > account_qty) {
-            var accIdxToSelect = tradableEmbed.accounts.length - 1;
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         } else if(!!savedAccId && !!tradableEmbed.accountMap[savedAccId]) {
             accountId = savedAccId;
         } else {
-            var accIdxToSelect = tradableEmbed.accounts.length - 1;
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         }
         tradableEmbed.setSelectedAccount(accountId, function() {
@@ -1403,7 +1400,7 @@ window.tradableEmbed = (function($){
     var char;
     function hashCode(str){
         var hash = 0;
-        if (str.length == 0) return hash;
+        if (str.length === 0) return hash;
         for (i = 0; i < str.length; i++) {
             char = str.charCodeAt(i);
             hash = ((hash<<5)-hash)+char;
@@ -1413,7 +1410,18 @@ window.tradableEmbed = (function($){
     }
 
     function ie() {
-        return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)))
+        return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
-})(trEmbJQ);
+
+    /* CommonJS */
+    if (typeof require === "function" && typeof module === "object" && module && module.exports) {
+        module.exports = tradableEmbed;
+    }
+    /* Global */ 
+    else {
+        global.tradableEmbed = tradableEmbed;
+        global.trEmbJQ = trEmbJQ;
+    }
+
+})(this, trEmbJQ);
