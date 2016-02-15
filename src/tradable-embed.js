@@ -43,7 +43,7 @@ window.tradableEmbed = (function($){
         }
         appId = $('#'+scriptId).attr("data-app-id");
         customOAuthUrl = $('#'+scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
-        var rURI = $('#'+scriptId).attr("data-redirect-uri")
+        var rURI = $('#'+scriptId).attr("data-redirect-uri");
         if(!!rURI) {
             redirectUrl = rURI;
         }
@@ -291,7 +291,7 @@ window.tradableEmbed = (function($){
         },
         makeOsRequest : function (reqType, type, accountId, method, postData, resolve, reject){
             var endpoint;
-            if(reqType === "apps" || reqType === "brokers") {
+            if(reqType !== "user" && reqType !== "accounts") {
                 endpoint = 'https://'+oauthHost;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
                 endpoint = tradableEmbed.authEndpoint;
@@ -455,6 +455,70 @@ window.tradableEmbed = (function($){
         getBrokers : function (resolve, reject) {
             return tradableEmbed.makeOsRequest("brokers", "GET", "", "", null, resolve, reject);
         },
+        //v1/authenticate
+        /**
+         * Provides a token granting access to the account(s) associated with the given login
+         * @param      {long} appId The id of the app that is requesting access
+         * @param      {long} brokerId  The id of the broker that the account is at
+         * @param      {String} login The login for the account
+         * @param      {String} password The password for the account
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        authenticateWithCredentials : function (appId, brokerId, login, password, resolve, reject) {
+            var apiAuthenticationRequest = {"appId": appId, "brokerId": brokerId, "login": login, "password": password};
+            var authenticatePromise =  tradableEmbed.makeOsRequest("authenticate", "POST", "", "", apiAuthenticationRequest).then(function(apiAuthentication) {
+                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            });
+
+            return resolvePromise(authenticatePromise, resolve, reject);
+        },
+        //v1/createDemoAccount
+        createDemoAccount : function (appId, type, resolve, reject) {
+            var demoAPIAuthenticationRequest = {"appId": appId, "type": type};
+            var createDemoPromise = tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(apiAuthentication) {
+                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            });
+
+            return resolvePromise(createDemoPromise, resolve, reject);
+        },
+        /**
+         * Creates a Forex demo account and returns an authentication granting access to that account
+         * @param      {long} appId The id of the app that is requesting access
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        createForexDemoAccount : function (appId, resolve, reject) {
+            return tradableEmbed.createDemoAccount(appId, "FOREX", resolve, reject);
+        },
+        /**
+         * Creates a Stock demo account and returns an authentication granting access to that account
+         * @param      {long} appId The id of the app that is requesting access
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        createStocksDemoAccount : function (appId, resolve, reject) {
+            return tradableEmbed.createDemoAccount(appId, "STOCKS", resolve, reject);
+        },
+        /**
+         * Refreshes the authentication that was granted when the refresh token was issued
+         * @param      {String} refreshTokenValue The value of the refresh token.
+         * @param      {String} appSecret   The client secret of the app that is requesting the refresh
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        refreshAuthentication : function (refreshTokenValue, appSecret, type, resolve, reject) {
+            var apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue, "appSecret": appSecret };
+            var refreshTokenPromise = tradableEmbed.makeOsRequest("refreshAuthentication", "POST", "", "", apiRefreshAuthenticationRequest).then(function(apiAuthentication) {
+                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            });
+
+            return resolvePromise(refreshTokenPromise, resolve, reject);
+        },
         //v1/accounts
         /**
          * Initializes the tradableEmbed.accountsMap and the tradableEmbed.accounts list
@@ -476,17 +540,7 @@ window.tradableEmbed = (function($){
                 });
             });
 
-            if(!!resolve || !!reject){
-                return accountsPromise.then(function(data){
-                    if(typeof resolve === "function")
-                        return resolve(data);
-                }, function(jqXHR, message, error){
-                    if(typeof reject === "function")
-                        return reject(jqXHR, message, error);
-                });
-            } else {
-                return accountsPromise;
-            }
+            return resolvePromise(accountsPromise, resolve, reject);
         },
         //v1/accounts/{accountId}/candles
         /**
@@ -1386,6 +1440,20 @@ window.tradableEmbed = (function($){
             }, function() {
                 processingUpdate = false;
             });
+        }
+    }
+
+    function resolvePromise(promise, resolve, reject) {
+        if(!!resolve || !!reject){
+            return promise.then(function(data){
+                if(typeof resolve === "function")
+                    return resolve(data);
+            }, function(jqXHR, message, error){
+                if(typeof reject === "function")
+                    return reject(jqXHR, message, error);
+            });
+        } else {
+            return promise;
         }
     }
 
