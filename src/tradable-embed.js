@@ -1,6 +1,6 @@
 
 // Save jQuery in custom variable
-trEmbJQ = jQuery.noConflict(true);
+var trEmbJQ = jQuery.noConflict(true);
 
 // Immediately invoked function expression (IIFE)
 (function($){
