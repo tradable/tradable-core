@@ -3,29 +3,29 @@
 var trEmbJQ = jQuery.noConflict(true);
 
 // Immediately invoked function expression (IIFE)
-(function($){
+(function(global, $){
     // It's good practice
     'use strict';
 
      /**
      * Welcome to the tradable-embed documentation. Tradable Embed is an open API to easily build financial trading features into any app, through any brokerage. This is the documentation for the tradable-embed javascript SDK, which offers 2 kits:
-	 * <ul><li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li><li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li></ul>
-	 *
-	 * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
-	 * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
+     * <ul><li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li><li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li></ul>
+     *
+     * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
+     * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
      * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/trEmbDevVersionX/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
      * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
      * <pre>npm install tradable-embed-core</pre>
      * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
      * <pre>window.tradableEmbedConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-embed-core")</pre>
      * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
-	 *//**/
+     *//**/
 
 
     // Avoid console errors when not supported
-    if (typeof console === "undefined" || typeof console.log === "undefined") 
+    if (typeof console === "undefined" || typeof console.log === "undefined")
         console = { log: function() {} };
-    
+
     var jsVersion = "js-trEmbDevVersionX";
     var appId;
     var redirectUrl = location.href;
@@ -89,7 +89,7 @@ var trEmbJQ = jQuery.noConflict(true);
          * Boolean that indicates if the user is authenticated
          */
         tradingEnabled : tradingEnabled,
-        expirationTimeUTC : expirationTimeUTC, 
+        expirationTimeUTC : expirationTimeUTC,
         readyCallbacks : [],
         accounts : [],
         accountIdsToExclude : [],
@@ -226,7 +226,7 @@ var trEmbJQ = jQuery.noConflict(true);
             var symbolKey = symbolToRemove + ":" + updateClientId;
             tradableEmbed.symbolKeysForAccountUpdates = $.grep(tradableEmbed.symbolKeysForAccountUpdates, function(value) {
                 return value != symbolKey;
-            });  
+            });
         },
         /**
          * Gets notified every time the selectedAccount is changed (through the setSelectedAccount method)
@@ -242,18 +242,18 @@ var trEmbJQ = jQuery.noConflict(true);
         /**
          * Gets called back when the token expires
          * @param      {Function} callback Callback function to be notified
-         */        
+         */
         onTokenExpired: function(callback) {
             if(!!callback) {
                 if($.inArray(callback, tokenExpirationCallbacks) === -1) {
                     tokenExpirationCallbacks.push(callback);
-                }                
+                }
             }
         },
         /**
          * Gets called when a general error occurs, for example an account initialization error due to a password change
          * @param      {Function} callback Callback function to be notified
-         */        
+         */
         onError: function(callback) {
             if($.inArray(callback, errorCallbacks) === -1) {
                 errorCallbacks.push(callback);
@@ -262,7 +262,7 @@ var trEmbJQ = jQuery.noConflict(true);
         /**
          * Gets called back every 5 minutes when the remaining token time is less than 30 minutes
          * @param      {Function} callback Callback function to be notified
-         */           
+         */
         onTokenWillExpire: function(callback) {
             if(tokenWillExpireCallbacks.length === 0) {
                 setInterval(processTokenWillExpire, 300000); // 5 minutes
@@ -282,7 +282,7 @@ var trEmbJQ = jQuery.noConflict(true);
         /**
          * Returns the remaining milliseconds for the token to expire
          * @return     {long} remainingMillis Remaining milliseconds for the token to expire
-         */ 
+         */
         getRemainingTokenMillis : function() {
             if(!tradableEmbed.expirationTimeUTC) {
                 console.log("You need to authenticate before calling this method");
@@ -307,21 +307,21 @@ var trEmbJQ = jQuery.noConflict(true);
                     request.setRequestHeader("x-tr-embed-sdk", jsVersion);
                 },
                 crossDomain: true,
-                url: (!!accountId && accountId.length > 0) ? (endpoint+"/v1/"+reqType+"/"+accountId+"/"+method) 
+                url: (!!accountId && accountId.length > 0) ? (endpoint+"/v1/"+reqType+"/"+accountId+"/"+method)
                                                            : (endpoint+"/v1/"+reqType+"/"+method),
                 contentType: "application/json; charset=utf-8",
                 data: (!!postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
             });
 
-            ajaxPromise.then(function(){}, 
+            ajaxPromise.then(function(){},
                 function(jqXHR, message, error){
                     if(!!jqXHR.responseJSON && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
                         notifyTokenExpired();
                         notifyErrorCallbacks(jqXHR.responseJSON);
                     }
                 });
-            
+
             if(!!resolve || !!reject){
                 return ajaxPromise.then(function(data){
                     if(typeof resolve === "function")
@@ -346,7 +346,7 @@ var trEmbJQ = jQuery.noConflict(true);
          * @param      {String}   uniqueId Account uniqueId
          * @param      {Function} resolve Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject Error callback for the API call
-         */ 
+         */
         setSelectedAccount : function (accountId, resolve, reject){
             if(!!tradableEmbed.accountMap[accountId]) {
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
@@ -359,7 +359,7 @@ var trEmbJQ = jQuery.noConflict(true);
                     if(!!resolve) {
                         resolve();
                     }
-                }, 
+                },
                 function(err) {
                     if(err.status === 502 || err.status === 403) {
                         tradableEmbed.excludeCurrentAccount();
@@ -388,7 +388,7 @@ var trEmbJQ = jQuery.noConflict(true);
          * Returns the correspondent instrument obj to the symbol if it's in the current account
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
-         */ 
+         */
         getInstrumentFromSymbol : function(symbol) {
             if(!symbol) {
                 return null;
@@ -406,7 +406,7 @@ var trEmbJQ = jQuery.noConflict(true);
          * Returns the correspondent instrument obj to the brokerageAccountSymbol if it's in the current account
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
-         */ 
+         */
         getInstrumentFromBrokerageAccountSymbol : function(brokerageAccountSymbol) {
             var instrument = null;
             $(tradableEmbed.availableInstruments).each(function(index, ins){
@@ -901,7 +901,7 @@ var trEmbJQ = jQuery.noConflict(true);
         },
         //v1/accounts/{accountId}/positions/{positionId}/protections
         /**
-         * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount) 
+         * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {double} stoploss Stop Loss price
          * @param      {double} takeprofit Take Profit price
@@ -913,7 +913,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.addOrModifyProtectionsForAccount(tradableEmbed.selectedAccountId, positionId, takeProfit, stopLoss, resolve, reject);
         },
         /**
-         * Adds or modifies stoploss AND takeprofit on a position (on a specific account) 
+         * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {double} stoploss Stop Loss price
@@ -927,7 +927,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId+"/protections/", protection, resolve, reject);
         },
         /**
-         * Cancel stoploss and takeprofit protections on a position (on the selectedAccount) 
+         * Cancel stoploss and takeprofit protections on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -937,7 +937,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.cancelProtectionsForAccount(tradableEmbed.selectedAccountId, positionId, resolve, reject);
         },
         /**
-         * Cancel stoploss and takeprofit protections on a position (on a specific account) 
+         * Cancel stoploss and takeprofit protections on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -960,7 +960,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequest("PUT", positionId, newPrice, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Adds or modifies the take profit order on a position. (on a specific account) 
+         * Adds or modifies the take profit order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
@@ -983,7 +983,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequest("PUT", positionId, newPrice, "STOPLOSS", resolve, reject);
         },
         /**
-         * Adds or modifies the stop loss order on a position. (on a specific account) 
+         * Adds or modifies the stop loss order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
@@ -995,7 +995,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequestForAccount("PUT", accountId, positionId, newPrice, "STOPLOSS", resolve, reject);
         },
         /**
-         * Cancel the take profit order on a position. (on the selectedAccount) 
+         * Cancel the take profit order on a position. (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1005,7 +1005,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequest("DELETE", positionId, 0, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Cancel the take profit order on a position. (on a specific account) 
+         * Cancel the take profit order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1016,7 +1016,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequestForAccount("DELETE", accountId, positionId, 0, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Cancel the stop loss order on a position. (on the selectedAccount) 
+         * Cancel the stop loss order on a position. (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1026,7 +1026,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeProtectionRequest("DELETE", positionId, 0, "STOPLOSS", resolve, reject);
         },
         /**
-         * Cancel the stop loss order on a position. (on a specific account) 
+         * Cancel the stop loss order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1048,7 +1048,7 @@ var trEmbJQ = jQuery.noConflict(true);
         },
         //v1/accounts/{accountId}/prices
         /**
-         * A list of prices for certain symbols (on the selectedAccount) 
+         * A list of prices for certain symbols (on the selectedAccount)
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1058,7 +1058,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.getPricesForAccount(tradableEmbed.selectedAccountId, symbols, resolve, reject);
         },
         /**
-         * A list of prices for certain symbols (on a specific account) 
+         * A list of prices for certain symbols (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1082,7 +1082,7 @@ var trEmbJQ = jQuery.noConflict(true);
                 data: JSON.stringify(symbolsObj),
                 dataType: 'json'
             });
-            
+
             if(!!resolve || !!reject){
                 return ajaxPromise.then(function(data){
                     if(typeof resolve === "function") {
@@ -1115,7 +1115,7 @@ var trEmbJQ = jQuery.noConflict(true);
             }
         },
         /**
-         * A list of close prices for the previous day for certain symbols (on a specific account) 
+         * A list of close prices for the previous day for certain symbols (on a specific account)
          * @param      {Array} symbols Array of symbols for the wanted daily close prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1141,7 +1141,7 @@ var trEmbJQ = jQuery.noConflict(true);
                         tradableEmbed.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in) * 1000); //expires conversion
                         localStorage.setItem("expirationTimeUTC:"+appId, tradableEmbed.expirationTimeUTC);
                     }
-                }                
+                }
             }
 
             var accountQty = tradableEmbed.accounts.length;
@@ -1150,7 +1150,7 @@ var trEmbJQ = jQuery.noConflict(true);
             });
         }
     };
-    
+
     initializeLibrary();
 
     function initializeLibrary(){
@@ -1161,7 +1161,7 @@ var trEmbJQ = jQuery.noConflict(true);
                 opener.tradableEmbed.enableTrading(undefined, undefined, undefined, true);
             } catch(err) {}
             window.close(); // execution stops
-        } else if(!!opener && window.name === "osLaunch"){            
+        } else if(!!opener && window.name === "osLaunch"){
             var hashFragment = window.location.hash;
             if(hashFragment) {
                 try {
@@ -1288,12 +1288,12 @@ var trEmbJQ = jQuery.noConflict(true);
             tradableEmbed.availableInstruments.splice(0, tradableEmbed.availableInstruments.length);
             tradableEmbed.availableSymbols.splice(0, tradableEmbed.availableSymbols.length);
             tradableEmbed.availableCurrencies.splice(0, tradableEmbed.availableCurrencies.length);
-            
+
             var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
             $(acctInstruments).each(function(index, instrument){
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
-                 
+
                  if(instrument.type === "FOREX" && instrument.symbol.length === 6) {
                      var ccy1 = instrument.symbol.toLowerCase().substring(0, 3);
                      var ccy2 = instrument.symbol.toLowerCase().substring(3, 6);
@@ -1309,7 +1309,7 @@ var trEmbJQ = jQuery.noConflict(true);
 
                  if ($.inArray(instrument.type, tradableEmbed.availableCategories) === -1){
                      tradableEmbed.availableCategories.push(instrument.type);
-                 } 
+                 }
             });
             if(reset) {
                 tradableEmbed.tradingEnabled = true;
@@ -1336,7 +1336,7 @@ var trEmbJQ = jQuery.noConflict(true);
         tradableEmbed.getAccounts().then(
             function(accounts) {
                 tradableEmbed.enableTrading(tradableEmbed.accessToken, tradableEmbed.authEndpoint);
-            }, 
+            },
             function() {
                 tradableEmbed.tradingEnabled = false;
                 if(isLocalStorageSupported()) {
@@ -1396,9 +1396,9 @@ var trEmbJQ = jQuery.noConflict(true);
         return url;
     }
 
-    var i;
-    var char;
     function hashCode(str){
+        var i;
+        var char;
         var hash = 0;
         if (str.length === 0) return hash;
         for (i = 0; i < str.length; i++) {
@@ -1418,10 +1418,10 @@ var trEmbJQ = jQuery.noConflict(true);
     if (typeof require === "function" && typeof module === "object" && module && module.exports) {
         module.exports = tradableEmbed;
     }
-    /* Global */ 
+    /* Global */
     else {
         global.tradableEmbed = tradableEmbed;
         global.trEmbJQ = trEmbJQ;
     }
 
-})(this, trEmbJQ);
+})(window, trEmbJQ);
