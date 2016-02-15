@@ -23,18 +23,18 @@ var trEmbJQ = jQuery.noConflict(true);
 
 
     // Avoid console errors when not supported
-    if (typeof console === "undefined" || typeof console.log === "undefined")
-        console = { log: function() {} };
+    var console = (typeof console === "undefined" || typeof console.log === "undefined") ? { log: function() {} } : console;
 
     var jsVersion = "js-trEmbDevVersionX";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
-    if(typeof tradableEmbedConfig !== "undefined") {
-        appId = tradableEmbedConfig.appId;
-        customOAuthUrl = tradableEmbedConfig.customOAuthURL;
-        if(!!tradableEmbedConfig.redirectURI) {
-            redirectUrl = tradableEmbedConfig.redirectURI;
+    var config = tradableEmbedConfig || global.tradableEmbedConfig;
+    if(typeof config !== "undefined") {
+        appId = config.appId;
+        customOAuthUrl = config.customOAuthURL;
+        if(!!config.redirectURI) {
+            redirectUrl = config.redirectURI;
         }
     } else {
         var scriptId = "tradable-embed";
@@ -1424,4 +1424,4 @@ var trEmbJQ = jQuery.noConflict(true);
         global.trEmbJQ = trEmbJQ;
     }
 
-})(window, trEmbJQ);
+})(this, trEmbJQ);
