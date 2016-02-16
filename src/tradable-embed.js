@@ -1,31 +1,31 @@
 
 // Save jQuery in custom variable
-window.trEmbJQ = jQuery.noConflict(true);
-
-// Avoid console errors when not supported
-if (typeof window.console === "undefined" || typeof window.console.log === "undefined") {
-    window.console = { log: function() {} };
-}
+var trEmbJQ = jQuery.noConflict(true);
 
 // Immediately invoked function expression (IIFE)
-window.tradableEmbed = (function($){
+(function(global, $) {
     // It's good practice
     'use strict';
 
      /**
      * Welcome to the tradable-embed documentation. Tradable Embed is an open API to easily build financial trading features into any app, through any brokerage. This is the documentation for the tradable-embed javascript SDK, which offers 2 kits:
-	 * <ul><li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li><li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li></ul>
-	 *
-	 * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
-	 * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
+     * <ul><li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li><li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li></ul>
+     *
+     * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
+     * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
      * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/trEmbDevVersionX/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
      * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
      * <pre>npm install tradable-embed-core</pre>
      * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
      * <pre>window.tradableEmbedConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-embed-core")</pre>
      * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
-	 *//**/
-    
+     *//**/
+
+
+    if (typeof console === "undefined" || typeof console.log === "undefined") {
+        global.console = { log: function() {} };
+    }
+
     var jsVersion = "js-trEmbDevVersionX";
     var appId;
     var redirectUrl = location.href;
@@ -38,7 +38,7 @@ window.tradableEmbed = (function($){
         }
     } else {
         var scriptId = "tradable-embed";
-        if($('#' + scriptId).length == 0) { // Backwards compatibility
+        if($('#' + scriptId).length === 0) { // Backwards compatibility
             scriptId = "tradable-api";
         }
         appId = $('#'+scriptId).attr("data-app-id");
@@ -89,7 +89,7 @@ window.tradableEmbed = (function($){
          * Boolean that indicates if the user is authenticated
          */
         tradingEnabled : tradingEnabled,
-        expirationTimeUTC : expirationTimeUTC, 
+        expirationTimeUTC : expirationTimeUTC,
         readyCallbacks : [],
         accounts : [],
         accountIdsToExclude : [],
@@ -99,12 +99,12 @@ window.tradableEmbed = (function($){
         availableCategories : [],
         availableInstruments : [],
         availableSymbols : [],
-		availableCurrencies : [],
-		lastSnapshot: null,
-		symbolKeysForAccountUpdates: [],
-		accountUpdateInterval: null,
-		accountUpdateMillis: 700,
-		/**
+        availableCurrencies : [],
+        lastSnapshot: null,
+        symbolKeysForAccountUpdates: [],
+        accountUpdateInterval: null,
+        accountUpdateMillis: 700,
+        /**
          * Start oauth flow within the page
          * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
@@ -212,8 +212,8 @@ window.tradableEmbed = (function($){
                 return;
             }
             var symbolKey = symbolToAdd + ":" + updateClientId;
-            if($.inArray(symbolKey, tradableEmbed.symbolKeysForAccountUpdates) === -1
-                    && $.inArray(symbolToAdd, tradableEmbed.availableSymbols) !== -1) {
+            if($.inArray(symbolKey, tradableEmbed.symbolKeysForAccountUpdates) === -1 &&
+                $.inArray(symbolToAdd, tradableEmbed.availableSymbols) !== -1) {
                 tradableEmbed.symbolKeysForAccountUpdates.push(symbolKey);
             }
         },
@@ -226,7 +226,7 @@ window.tradableEmbed = (function($){
             var symbolKey = symbolToRemove + ":" + updateClientId;
             tradableEmbed.symbolKeysForAccountUpdates = $.grep(tradableEmbed.symbolKeysForAccountUpdates, function(value) {
                 return value != symbolKey;
-            });  
+            });
         },
         /**
          * Gets notified every time the selectedAccount is changed (through the setSelectedAccount method)
@@ -242,18 +242,18 @@ window.tradableEmbed = (function($){
         /**
          * Gets called back when the token expires
          * @param      {Function} callback Callback function to be notified
-         */        
+         */
         onTokenExpired: function(callback) {
             if(!!callback) {
                 if($.inArray(callback, tokenExpirationCallbacks) === -1) {
                     tokenExpirationCallbacks.push(callback);
-                }                
+                }
             }
         },
         /**
          * Gets called when a general error occurs, for example an account initialization error due to a password change
          * @param      {Function} callback Callback function to be notified
-         */        
+         */
         onError: function(callback) {
             if($.inArray(callback, errorCallbacks) === -1) {
                 errorCallbacks.push(callback);
@@ -262,7 +262,7 @@ window.tradableEmbed = (function($){
         /**
          * Gets called back every 5 minutes when the remaining token time is less than 30 minutes
          * @param      {Function} callback Callback function to be notified
-         */           
+         */
         onTokenWillExpire: function(callback) {
             if(tokenWillExpireCallbacks.length === 0) {
                 setInterval(processTokenWillExpire, 300000); // 5 minutes
@@ -282,7 +282,7 @@ window.tradableEmbed = (function($){
         /**
          * Returns the remaining milliseconds for the token to expire
          * @return     {long} remainingMillis Remaining milliseconds for the token to expire
-         */ 
+         */
         getRemainingTokenMillis : function() {
             if(!tradableEmbed.expirationTimeUTC) {
                 console.log("You need to authenticate before calling this method");
@@ -307,21 +307,21 @@ window.tradableEmbed = (function($){
                     request.setRequestHeader("x-tr-embed-sdk", jsVersion);
                 },
                 crossDomain: true,
-                url: (!!accountId && accountId.length > 0) ? (endpoint+"/v1/"+reqType+"/"+accountId+"/"+method) 
+                url: (!!accountId && accountId.length > 0) ? (endpoint+"/v1/"+reqType+"/"+accountId+"/"+method)
                                                            : (endpoint+"/v1/"+reqType+"/"+method),
                 contentType: "application/json; charset=utf-8",
                 data: (!!postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
             });
 
-            ajaxPromise.then(function(){}, 
+            ajaxPromise.then(function(){},
                 function(jqXHR, message, error){
                     if(!!jqXHR.responseJSON && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
                         notifyTokenExpired();
                         notifyErrorCallbacks(jqXHR.responseJSON);
                     }
                 });
-            
+
             if(!!resolve || !!reject){
                 return ajaxPromise.then(function(data){
                     if(typeof resolve === "function")
@@ -346,11 +346,12 @@ window.tradableEmbed = (function($){
          * @param      {String}   uniqueId Account uniqueId
          * @param      {Function} resolve Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject Error callback for the API call
-         */ 
+         */
         setSelectedAccount : function (accountId, resolve, reject){
             if(!!tradableEmbed.accountMap[accountId]) {
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
                 tradableEmbed.selectedAccountId = accountId;
+                console.log('accountId is set to: ' + accountId);
                 return initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
@@ -358,7 +359,7 @@ window.tradableEmbed = (function($){
                     if(!!resolve) {
                         resolve();
                     }
-                }, 
+                },
                 function(err) {
                     if(err.status === 502 || err.status === 403) {
                         tradableEmbed.excludeCurrentAccount();
@@ -370,7 +371,6 @@ window.tradableEmbed = (function($){
                         reject(err);
                     }
                 });
-                console.log('accountId is set to: ' + accountId);
             } else {
                 console.error("Can't set account id to: " + accountId);
             }
@@ -388,7 +388,7 @@ window.tradableEmbed = (function($){
          * Returns the correspondent instrument obj to the symbol if it's in the current account
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
-         */ 
+         */
         getInstrumentFromSymbol : function(symbol) {
             if(!symbol) {
                 return null;
@@ -406,7 +406,7 @@ window.tradableEmbed = (function($){
          * Returns the correspondent instrument obj to the brokerageAccountSymbol if it's in the current account
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
-         */ 
+         */
         getInstrumentFromBrokerageAccountSymbol : function(brokerageAccountSymbol) {
             var instrument = null;
             $(tradableEmbed.availableInstruments).each(function(index, ins){
@@ -532,8 +532,8 @@ window.tradableEmbed = (function($){
                 tradableEmbed.accounts.splice(0, tradableEmbed.accounts.length);
                 tradableEmbed.accountMap = {};
                 $(data.accounts).each(function(index, account){
-                   if (!!account.uniqueId && account.uniqueId !== "NA"
-                        && tradableEmbed.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
+                   if (!!account.uniqueId && account.uniqueId !== "NA" &&
+                        tradableEmbed.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
                        tradableEmbed.accounts.push(account);
                        tradableEmbed.accountMap[account.uniqueId] = account;
                    }
@@ -955,7 +955,7 @@ window.tradableEmbed = (function($){
         },
         //v1/accounts/{accountId}/positions/{positionId}/protections
         /**
-         * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount) 
+         * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {double} stoploss Stop Loss price
          * @param      {double} takeprofit Take Profit price
@@ -967,7 +967,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.addOrModifyProtectionsForAccount(tradableEmbed.selectedAccountId, positionId, takeProfit, stopLoss, resolve, reject);
         },
         /**
-         * Adds or modifies stoploss AND takeprofit on a position (on a specific account) 
+         * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {double} stoploss Stop Loss price
@@ -981,7 +981,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId+"/protections/", protection, resolve, reject);
         },
         /**
-         * Cancel stoploss and takeprofit protections on a position (on the selectedAccount) 
+         * Cancel stoploss and takeprofit protections on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -991,7 +991,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.cancelProtectionsForAccount(tradableEmbed.selectedAccountId, positionId, resolve, reject);
         },
         /**
-         * Cancel stoploss and takeprofit protections on a position (on a specific account) 
+         * Cancel stoploss and takeprofit protections on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1014,7 +1014,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequest("PUT", positionId, newPrice, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Adds or modifies the take profit order on a position. (on a specific account) 
+         * Adds or modifies the take profit order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
@@ -1037,7 +1037,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequest("PUT", positionId, newPrice, "STOPLOSS", resolve, reject);
         },
         /**
-         * Adds or modifies the stop loss order on a position. (on a specific account) 
+         * Adds or modifies the stop loss order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
@@ -1049,7 +1049,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequestForAccount("PUT", accountId, positionId, newPrice, "STOPLOSS", resolve, reject);
         },
         /**
-         * Cancel the take profit order on a position. (on the selectedAccount) 
+         * Cancel the take profit order on a position. (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1059,7 +1059,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequest("DELETE", positionId, 0, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Cancel the take profit order on a position. (on a specific account) 
+         * Cancel the take profit order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1070,7 +1070,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequestForAccount("DELETE", accountId, positionId, 0, "TAKEPROFIT", resolve, reject);
         },
         /**
-         * Cancel the stop loss order on a position. (on the selectedAccount) 
+         * Cancel the stop loss order on a position. (on the selectedAccount)
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1080,7 +1080,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.makeProtectionRequest("DELETE", positionId, 0, "STOPLOSS", resolve, reject);
         },
         /**
-         * Cancel the stop loss order on a position. (on a specific account) 
+         * Cancel the stop loss order on a position. (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1102,7 +1102,7 @@ window.tradableEmbed = (function($){
         },
         //v1/accounts/{accountId}/prices
         /**
-         * A list of prices for certain symbols (on the selectedAccount) 
+         * A list of prices for certain symbols (on the selectedAccount)
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1112,7 +1112,7 @@ window.tradableEmbed = (function($){
             return tradableEmbed.getPricesForAccount(tradableEmbed.selectedAccountId, symbols, resolve, reject);
         },
         /**
-         * A list of prices for certain symbols (on a specific account) 
+         * A list of prices for certain symbols (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1136,7 +1136,7 @@ window.tradableEmbed = (function($){
                 data: JSON.stringify(symbolsObj),
                 dataType: 'json'
             });
-            
+
             if(!!resolve || !!reject){
                 return ajaxPromise.then(function(data){
                     if(typeof resolve === "function") {
@@ -1169,7 +1169,7 @@ window.tradableEmbed = (function($){
             }
         },
         /**
-         * A list of close prices for the previous day for certain symbols (on a specific account) 
+         * A list of close prices for the previous day for certain symbols (on a specific account)
          * @param      {Array} symbols Array of symbols for the wanted daily close prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1195,7 +1195,7 @@ window.tradableEmbed = (function($){
                         tradableEmbed.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in) * 1000); //expires conversion
                         localStorage.setItem("expirationTimeUTC:"+appId, tradableEmbed.expirationTimeUTC);
                     }
-                }                
+                }
             }
 
             var accountQty = tradableEmbed.accounts.length;
@@ -1204,10 +1204,8 @@ window.tradableEmbed = (function($){
             });
         }
     };
-    
+
     initializeLibrary();
-	
-    return tradableEmbed;
 
     function initializeLibrary(){
         var success = false;
@@ -1217,7 +1215,7 @@ window.tradableEmbed = (function($){
                 opener.tradableEmbed.enableTrading(undefined, undefined, undefined, true);
             } catch(err) {}
             window.close(); // execution stops
-        } else if(!!opener && window.name === "osLaunch"){            
+        } else if(!!opener && window.name === "osLaunch"){
             var hashFragment = window.location.hash;
             if(hashFragment) {
                 try {
@@ -1230,10 +1228,10 @@ window.tradableEmbed = (function($){
                     success = processHashFragment(hashFragment, tradableEmbed);
                 }
             }
-        } else if(window.location.hash 
-                    && (window.location.hash.indexOf("access_token") !== -1 
-                    && window.location.hash.indexOf("endpointURL") !== -1
-                    && window.location.hash.indexOf("expires_in") !== -1)) {
+        } else if(window.location.hash &&
+                    window.location.hash.indexOf("access_token") !== -1 &&
+                    window.location.hash.indexOf("endpointURL") !== -1 &&
+                    window.location.hash.indexOf("expires_in") !== -1) {
             success = processHashFragment(window.location.hash, tradableEmbed);
         } else if(tradableEmbed.tradingEnabled) {
             validateToken();
@@ -1298,8 +1296,8 @@ window.tradableEmbed = (function($){
         var wTop = window.screenTop ? window.screenTop : window.screenY;
         var left = wLeft + (window.innerWidth / 2) - (w / 2);
         var top = wTop + (window.innerHeight / 2) - (h / 2);
-        return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, '
-            + 'scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+        return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, ' +
+            'scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
     }
 
     function notifyReadyCallbacks() {
@@ -1344,28 +1342,28 @@ window.tradableEmbed = (function($){
             tradableEmbed.availableInstruments.splice(0, tradableEmbed.availableInstruments.length);
             tradableEmbed.availableSymbols.splice(0, tradableEmbed.availableSymbols.length);
             tradableEmbed.availableCurrencies.splice(0, tradableEmbed.availableCurrencies.length);
-            
+
             var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
             $(acctInstruments).each(function(index, instrument){
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
-                 
+
                  if(instrument.type === "FOREX" && instrument.symbol.length === 6) {
                      var ccy1 = instrument.symbol.toLowerCase().substring(0, 3);
                      var ccy2 = instrument.symbol.toLowerCase().substring(3, 6);
-                     if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1
-                            && $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
+                     if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1 &&
+                            $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
                          tradableEmbed.availableCurrencies.push(ccy1);
                      }
-                     if ($.inArray(ccy2, tradableEmbed.availableCurrencies) === -1
-                             && $.inArray(ccy1, nonValidCurrencies) === -1){
+                     if ($.inArray(ccy2, tradableEmbed.availableCurrencies) === -1 &&
+                            $.inArray(ccy1, nonValidCurrencies) === -1){
                          tradableEmbed.availableCurrencies.push(ccy2);
                      }
                  }
 
                  if ($.inArray(instrument.type, tradableEmbed.availableCategories) === -1){
                      tradableEmbed.availableCategories.push(instrument.type);
-                 } 
+                 }
             });
             if(reset) {
                 tradableEmbed.tradingEnabled = true;
@@ -1392,7 +1390,7 @@ window.tradableEmbed = (function($){
         tradableEmbed.getAccounts().then(
             function(accounts) {
                 tradableEmbed.enableTrading(tradableEmbed.accessToken, tradableEmbed.authEndpoint);
-            }, 
+            },
             function() {
                 tradableEmbed.tradingEnabled = false;
                 if(isLocalStorageSupported()) {
@@ -1407,13 +1405,12 @@ window.tradableEmbed = (function($){
         console.log('Accounts initialized');
         var accountId;
         var savedAccId = localStorage.getItem("selectedAccount:"+appId);
+        var accIdxToSelect = tradableEmbed.accounts.length - 1;
         if(!!set_latest_account && tradableEmbed.accounts.length > account_qty) {
-            var accIdxToSelect = tradableEmbed.accounts.length - 1;
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         } else if(!!savedAccId && !!tradableEmbed.accountMap[savedAccId]) {
             accountId = savedAccId;
         } else {
-            var accIdxToSelect = tradableEmbed.accounts.length - 1;
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         }
         tradableEmbed.setSelectedAccount(accountId, function() {
@@ -1467,11 +1464,11 @@ window.tradableEmbed = (function($){
         return url;
     }
 
-    var i;
-    var char;
     function hashCode(str){
+        var i;
+        var char;
         var hash = 0;
-        if (str.length == 0) return hash;
+        if (str.length === 0) return hash;
         for (i = 0; i < str.length; i++) {
             char = str.charCodeAt(i);
             hash = ((hash<<5)-hash)+char;
@@ -1481,7 +1478,18 @@ window.tradableEmbed = (function($){
     }
 
     function ie() {
-        return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)))
+        return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
-})(trEmbJQ);
+
+    /* CommonJS */
+    if (typeof require === "function" && typeof module === "object" && module && module.exports) {
+        module.exports = tradableEmbed;
+    }
+    /* Global */
+    else {
+        global.tradableEmbed = tradableEmbed;
+        global.trEmbJQ = trEmbJQ;
+    }
+
+})(this, trEmbJQ);
