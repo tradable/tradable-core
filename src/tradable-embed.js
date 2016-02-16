@@ -2,6 +2,11 @@
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
 
+// Find the JS global object
+var jsGlobalObject = (typeof window !== "undefined") ? window :
+                     (typeof self !== "undefined") ? self :
+                     (typeof global !== "undefined") ? global : this;
+
 // Immediately invoked function expression (IIFE)
 (function(global, $) {
     // It's good practice
@@ -21,7 +26,7 @@ var trEmbJQ = jQuery.noConflict(true);
      * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
      *//**/
 
-
+    // Avoid console errors when not supported
     if (typeof console === "undefined" || typeof console.log === "undefined") {
         global.console = { log: function() {} };
     }
@@ -1481,15 +1486,13 @@ var trEmbJQ = jQuery.noConflict(true);
         return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
+    /* Global */
+    global.trEmbJQ = trEmbJQ;
+    global.tradableEmbed = tradableEmbed;
 
     /* CommonJS */
     if (typeof require === "function" && typeof module === "object" && module && module.exports) {
         module.exports = tradableEmbed;
     }
-    /* Global */
-    else {
-        global.tradableEmbed = tradableEmbed;
-        global.trEmbJQ = trEmbJQ;
-    }
 
-})(this, trEmbJQ);
+})(jsGlobalObject, trEmbJQ);
