@@ -21,21 +21,20 @@ var trEmbJQ = jQuery.noConflict(true);
      * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
      *//**/
 
+
+    if (typeof console === "undefined" || typeof console.log === "undefined") {
+        global.console = { log: function() {} };
+    }
+
     var jsVersion = "js-trEmbDevVersionX";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
-    var config = tradableEmbedConfig || global.tradableEmbedConfig;
-
-    // Avoid console errors when not supported
-    var loggingDisabled = typeof console === "undefined" || typeof console.log === "undefined" || config.disableLogging;
-    var log = loggingDisabled ? function() {} : console.log.bind(console);
-
-    if(typeof config !== "undefined") {
-        appId = config.appId;
-        customOAuthUrl = config.customOAuthURL;
-        if(!!config.redirectURI) {
-            redirectUrl = config.redirectURI;
+     if(typeof tradableEmbedConfig !== "undefined") {
+        appId = tradableEmbedConfig.appId;
+        customOAuthUrl = tradableEmbedConfig.customOAuthURL;
+        if(!!tradableEmbedConfig.redirectURI) {
+            redirectUrl = tradableEmbedConfig.redirectURI;
         }
     } else {
         var scriptId = "tradable-embed";
@@ -53,7 +52,7 @@ var trEmbJQ = jQuery.noConflict(true);
     var oauthHost = "api.tradable.com";
     if(appId > 200000) { // Staging app-id
         oauthHost = "api-staging.tradable.com";
-        log("Starting in staging mode...");
+        console.log("Starting in staging mode...");
     }
 
     var token = localStorage.getItem("accessToken:"+appId);
@@ -110,7 +109,7 @@ var trEmbJQ = jQuery.noConflict(true);
          * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         authenticate: function (brokerId) {
-            log("Starting oauth flow...");
+            console.log("Starting oauth flow...");
             if (!tradableEmbed.tradingEnabled){
                 location.href = getAuthUrl(brokerId);
             } else {
@@ -122,10 +121,10 @@ var trEmbJQ = jQuery.noConflict(true);
          */
         authenticateWithWindow: function (brokerId){
             if(ie()) {
-                log('Window opener no supported in IE, redirecting to oauth...');
+                console.log('Window opener no supported in IE, redirecting to oauth...');
                 return tradableEmbed.authenticate(brokerId);
             }
-            log("Opening oauth window...");
+            console.log("Opening oauth window...");
             tradableEmbed.auth_window = popupwindow(getAuthUrl(brokerId), 'osLaunch', 450, 450);
         },
         /**
@@ -199,7 +198,7 @@ var trEmbJQ = jQuery.noConflict(true);
                     tradableEmbed.accountUpdateInterval = setInterval(processAccountUpdate, tradableEmbed.accountUpdateMillis);
                 }
             } else {
-                _console.error("Please specify a valid update frequency");
+                console.error("Please specify a valid update frequency");
             }
         },
         /**
@@ -209,7 +208,7 @@ var trEmbJQ = jQuery.noConflict(true);
          */
         addSymbolToUpdates: function(updateClientId, symbolToAdd) {
             if(updateClientId.indexOf(":") !== -1) {
-                _console.error("It is not allowed to include a colon ':' in the updateClientId");
+                console.error("It is not allowed to include a colon ':' in the updateClientId");
                 return;
             }
             var symbolKey = symbolToAdd + ":" + updateClientId;
@@ -286,7 +285,7 @@ var trEmbJQ = jQuery.noConflict(true);
          */
         getRemainingTokenMillis : function() {
             if(!tradableEmbed.expirationTimeUTC) {
-                log("You need to authenticate before calling this method");
+                console.log("You need to authenticate before calling this method");
             }
             return (tradableEmbed.expirationTimeUTC - new Date().getTime());
         },
@@ -299,7 +298,7 @@ var trEmbJQ = jQuery.noConflict(true);
             } else if(!!tradableEmbed.accountMap[accountId]) {
                 endpoint = tradableEmbed.accountMap[accountId].endpointURL;
             } else {
-                _console.info("Please specify a valid accountId or method");
+                console.info("Please specify a valid accountId or method");
             }
             var ajaxPromise = $.ajax({
                 type: type,
@@ -352,7 +351,7 @@ var trEmbJQ = jQuery.noConflict(true);
             if(!!tradableEmbed.accountMap[accountId]) {
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
                 tradableEmbed.selectedAccountId = accountId;
-                log('accountId is set to: ' + accountId);
+                console.log('accountId is set to: ' + accountId);
                 return initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
@@ -373,7 +372,7 @@ var trEmbJQ = jQuery.noConflict(true);
                     }
                 });
             } else {
-                _console.error("Can't set account id to: " + accountId);
+                console.error("Can't set account id to: " + accountId);
             }
         },
         excludeCurrentAccount : function() {
@@ -1126,7 +1125,7 @@ var trEmbJQ = jQuery.noConflict(true);
             return tradableEmbed.makeCandleRequest("dailyClose", symbolsArray, resolve, reject);
         },
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
-            log("Activating TradableEmbed...");
+            console.log("Activating TradableEmbed...");
 
             if(!!access_token && !!end_point) {
                 tradableEmbed.accessToken = access_token;
@@ -1186,7 +1185,7 @@ var trEmbJQ = jQuery.noConflict(true);
         }
 
         if(!success) {
-           log('Initiating without authentication...');
+           console.log('Initiating without authentication...');
            $(document).ready(function() {
                notifyReadyCallbacks();
            });
@@ -1278,7 +1277,7 @@ var trEmbJQ = jQuery.noConflict(true);
     }
 
     function initializeValuesForCurrentAccount(resolve, reject) {
-        log('Initializing values for current account');
+        console.log('Initializing values for current account');
         var reset = false;
         if(tradableEmbed.tradingEnabled) {
             tradableEmbed.tradingEnabled = false;
@@ -1332,7 +1331,7 @@ var trEmbJQ = jQuery.noConflict(true);
     }
 
     function validateToken() {
-        log("Validating token...");
+        console.log("Validating token...");
         // Check token validity
         tradableEmbed.getAccounts().then(
             function(accounts) {
@@ -1349,7 +1348,7 @@ var trEmbJQ = jQuery.noConflict(true);
     }
 
     function setSelectedAccountAndNotify(set_latest_account, account_qty) {
-        log('Accounts initialized');
+        console.log('Accounts initialized');
         var accountId;
         var savedAccId = localStorage.getItem("selectedAccount:"+appId);
         var accIdxToSelect = tradableEmbed.accounts.length - 1;
