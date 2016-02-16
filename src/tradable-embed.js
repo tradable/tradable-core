@@ -30,7 +30,7 @@ var trEmbJQ = jQuery.noConflict(true);
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
-     if(typeof tradableEmbedConfig !== "undefined") {
+    if(typeof tradableEmbedConfig !== "undefined") {
         appId = tradableEmbedConfig.appId;
         customOAuthUrl = tradableEmbedConfig.customOAuthURL;
         if(!!tradableEmbedConfig.redirectURI) {
