@@ -462,8 +462,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         //v1/authenticate
         /**
-         * Provides a token granting access to the account(s) associated with the given login
-         * @param      {long} appId The id of the app that is requesting access
+         * Gets a token granting access to the account(s) associated with the given login and enables trading
          * @param      {long} brokerId  The id of the broker that the account is at
          * @param      {String} login The login for the account
          * @param      {String} password The password for the account
@@ -471,42 +470,56 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        authenticateWithCredentials : function (appId, brokerId, login, password, resolve, reject) {
-            var apiAuthenticationRequest = {"appId": appId, "brokerId": brokerId, "login": login, "password": password};
-            var authenticatePromise =  tradableEmbed.makeOsRequest("authenticate", "POST", "", "", apiAuthenticationRequest).then(function(apiAuthentication) {
-                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
-            });
+        authenticateWithCredentials : function (brokerId, login, password, resolve, reject) {
+            var deferred = new $.Deferred();
 
-            return resolvePromise(authenticatePromise, resolve, reject);
+            var apiAuthenticationRequest = {"appId": tradableEmbed.app_id, "brokerId": brokerId, "login": login, "password": password};
+            var apiAuthentication;
+            tradableEmbed.makeOsRequest("authenticate", "POST", "", "", apiAuthenticationRequest).then(function(auth) {
+                apiAuthentication = auth;
+                return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
+            }).then(function() {
+                deferred.resolve(apiAuthentication);
+            }, function(err) {
+                deferred.reject();
+            })
+
+            return resolveDeferred(deferred, resolve, reject);
         },
         //v1/createDemoAccount
-        createDemoAccount : function (appId, type, resolve, reject) {
-            var demoAPIAuthenticationRequest = {"appId": appId, "type": type};
-            var createDemoPromise = tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(apiAuthentication) {
-                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
-            });
+        createDemoAccount : function (type, resolve, reject) {
+            var deferred = new $.Deferred();
 
-            return resolvePromise(createDemoPromise, resolve, reject);
+            var demoAPIAuthenticationRequest = {"appId": tradableEmbed.app_id, "type": type};
+            var apiAuthentication;
+            tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(auth) {
+                apiAuthentication = auth;
+                return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
+            }).then(function() {
+                deferred.resolve(apiAuthentication);
+            }, function(err) {
+                deferred.reject();
+            })
+
+            return resolveDeferred(deferred, resolve, reject);
         },
         /**
-         * Creates a Forex demo account and returns an authentication granting access to that account
-         * @param      {long} appId The id of the app that is requesting access
+         * Creates a Forex demo account, gets an authentication token granting access to that account and enables trading for it
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        createForexDemoAccount : function (appId, resolve, reject) {
-            return tradableEmbed.createDemoAccount(appId, "FOREX", resolve, reject);
+        createForexDemoAccount : function (resolve, reject) {
+            return tradableEmbed.createDemoAccount("FOREX", resolve, reject);
         },
         /**
-         * Creates a Stock demo account and returns an authentication granting access to that account
-         * @param      {long} appId The id of the app that is requesting access
+         * Creates a Stock demo account, gets an authentication token granting access to that account and enables trading for it
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        createStocksDemoAccount : function (appId, resolve, reject) {
-            return tradableEmbed.createDemoAccount(appId, "STOCKS", resolve, reject);
+        createStocksDemoAccount : function (resolve, reject) {
+            return tradableEmbed.createDemoAccount("STOCKS", resolve, reject);
         },
         /**
          * Refreshes the authentication that was granted when the refresh token was issued
@@ -516,13 +529,25 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        refreshAuthentication : function (refreshTokenValue, appSecret, type, resolve, reject) {
-            var apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue, "appSecret": appSecret };
-            var refreshTokenPromise = tradableEmbed.makeOsRequest("refreshAuthentication", "POST", "", "", apiRefreshAuthenticationRequest).then(function(apiAuthentication) {
-                tradableEmbed.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
-            });
+        refreshAuthentication : function (refreshTokenValue, appSecret, resolve, reject) {
+            var deferred = new $.Deferred();
 
-            return resolvePromise(refreshTokenPromise, resolve, reject);
+            var apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue };
+            if(!!appSecret) {
+                // Autogenerated demo accounts don't require a secret
+                apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue, "appSecret": appSecret };
+            }
+            var apiAuthentication;
+            tradableEmbed.makeOsRequest("refreshAuthentication", "POST", "", "", apiRefreshAuthenticationRequest).then(function(auth) {
+                apiAuthentication = auth;
+                return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
+            }).then(function() {
+                deferred.resolve(apiAuthentication);
+            }, function(err) {
+                deferred.reject();
+            })
+
+            return resolveDeferred(deferred, resolve, reject);
         },
         //v1/accounts
         /**
@@ -545,7 +570,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 });
             });
 
-            return resolvePromise(accountsPromise, resolve, reject);
+            return resolveDeferred(accountsPromise, resolve, reject);
         },
         //v1/accounts/{accountId}/candles
         /**
@@ -1184,6 +1209,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradableEmbed.makeCandleRequest("dailyClose", symbolsArray, resolve, reject);
         },
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
+            var deferred = new $.Deferred();
+
             console.log("Activating TradableEmbed...");
 
             if(!!access_token && !!end_point) {
@@ -1205,8 +1232,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             var accountQty = tradableEmbed.accounts.length;
             tradableEmbed.getAccounts().then(function(accounts) {
-                setSelectedAccountAndNotify(set_latest_account, accountQty);
-            });
+                return setSelectedAccountAndNotify(set_latest_account, accountQty);
+            }).then(function() {
+                deferred.resolve();
+            }, function() {
+                deferred.reject();
+            });;
+
+            return deferred;
         }
     };
 
@@ -1407,6 +1440,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function setSelectedAccountAndNotify(set_latest_account, account_qty) {
+        var deferred = new $.Deferred();
+
         console.log('Accounts initialized');
         var accountId;
         var savedAccId = localStorage.getItem("selectedAccount:"+appId);
@@ -1420,7 +1455,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
         tradableEmbed.setSelectedAccount(accountId, function() {
             notifyReadyCallbacks();
+            deferred.resolve();
+        }, function() {
+            deferred.reject();
         });
+
+        return deferred;
     }
 
     function processAccountUpdate() {
@@ -1445,9 +1485,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     }
 
-    function resolvePromise(promise, resolve, reject) {
+    function resolveDeferred(deferred, resolve, reject) {
         if(!!resolve || !!reject){
-            return promise.then(function(data){
+            return deferred.then(function(data){
                 if(typeof resolve === "function")
                     return resolve(data);
             }, function(jqXHR, message, error){
@@ -1455,7 +1495,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     return reject(jqXHR, message, error);
             });
         } else {
-            return promise;
+            return deferred;
         }
     }
 
