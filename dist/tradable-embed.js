@@ -483,7 +483,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.resolve(apiAuthentication);
             }, function(err) {
                 deferred.reject();
-            })
+            });
 
             return resolveDeferred(deferred, resolve, reject);
         },
@@ -500,7 +500,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.resolve(apiAuthentication);
             }, function(err) {
                 deferred.reject();
-            })
+            });
 
             return resolveDeferred(deferred, resolve, reject);
         },
@@ -546,7 +546,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.resolve(apiAuthentication);
             }, function(err) {
                 deferred.reject();
-            })
+            });
 
             return resolveDeferred(deferred, resolve, reject);
         },
@@ -1238,7 +1238,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.resolve();
             }, function() {
                 deferred.reject();
-            });;
+            });
 
             return deferred;
         }
