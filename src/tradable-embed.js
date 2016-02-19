@@ -770,6 +770,44 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var order = {"amount": amount, "price": price, "side": side, "symbol": symbol, "type": type};
             return tradableEmbed.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
+         /**
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selectedAccount
+         * @param      {double} amount The order amount
+         * @param      {double} price The trigger price for the order
+         * @param      {String} side The order side ('BUY' or 'SELL')
+         * @param      {String} symbol The instrument symbol for the order
+         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
+         * @param      {double} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {double} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        placeOrderWithProtections : function (amount, price, side, symbol, type, tpDistance, slDistance, resolve, reject){
+            return tradableEmbed.placeOrderWithProtectionsForAccount(tradableEmbed.selectedAccountId, amount, price, side, symbol, type, tpDistance, slDistance, resolve, reject);
+        },
+         /**
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account
+         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {double} amount The order amount
+         * @param      {double} price The trigger price for the order
+         * @param      {String} side The order side ('BUY' or 'SELL')
+         * @param      {String} symbol The instrument symbol for the order
+         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
+         * @param      {double} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {double} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, symbol, type, tpDistance, slDistance, resolve, reject){
+            var order = {"amount": amount, "price": price, "side": side, "symbol": symbol, "type": type};
+            if(!!tpDistance)
+                order["takeProfitDistance"] = tpDistance;
+            if(!!slDistance)
+                order["stopLossDistance"] = slDistance
+            return tradableEmbed.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
+        },
         //v1/accounts/{accountId}/orders/pending
          /**
          * Returns a list of all the pending orders the selectedAccount - This will typically be limit orders but in a market without liquidity it can also contain market orders
@@ -1526,11 +1564,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
-    /* Global */
+    // Global
     global.trEmbJQ = trEmbJQ;
     global.tradableEmbed = tradableEmbed;
 
-    /* CommonJS */
+    // CommonJS
     if (typeof require === "function" && typeof module === "object" && module && module.exports) {
         module.exports = tradableEmbed;
     }
