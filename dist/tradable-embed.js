@@ -481,8 +481,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
             }).then(function() {
                 deferred.resolve(apiAuthentication);
-            }, function(err) {
-                deferred.reject();
+            }, function(error) {
+                deferred.reject(error);
             });
 
             return resolveDeferred(deferred, resolve, reject);
@@ -498,8 +498,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
             }).then(function() {
                 deferred.resolve(apiAuthentication);
-            }, function(err) {
-                deferred.reject();
+            }, function(error) {
+                deferred.reject(error);
             });
 
             return resolveDeferred(deferred, resolve, reject);
@@ -544,8 +544,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
             }).then(function() {
                 deferred.resolve(apiAuthentication);
-            }, function(err) {
-                deferred.reject();
+            }, function(error) {
+                deferred.reject(error);
             });
 
             return resolveDeferred(deferred, resolve, reject);
@@ -1274,8 +1274,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return setSelectedAccountAndNotify(set_latest_account, accountQty);
             }).then(function() {
                 deferred.resolve();
-            }, function() {
-                deferred.reject();
+            }, function(error) {
+                deferred.reject(error);
             });
 
             return deferred;
@@ -1495,8 +1495,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradableEmbed.setSelectedAccount(accountId, function() {
             notifyReadyCallbacks();
             deferred.resolve();
-        }, function() {
-            deferred.reject();
+        }, function(error) {
+            deferred.reject(error);
         });
 
         return deferred;
