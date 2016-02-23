@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.12  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.13  ******/
 
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
@@ -19,7 +19,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
      *
      * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
      * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
-     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.12/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
+     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.13/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
      * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
      * <pre>npm install tradable-embed-core</pre>
      * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
@@ -32,7 +32,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.12";
+    var jsVersion = "js-1.13";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -60,6 +60,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         oauthHost = "api-staging.tradable.com";
         console.log("Starting in staging mode...");
     }
+    var oauthURL = 'https://'+oauthHost+'/oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
 
     var token = localStorage.getItem("accessToken:"+appId);
     var authEndpoint = localStorage.getItem("authEndpoint:"+appId);
@@ -84,9 +85,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var tradableEmbed = {
         app_id: appId,
         oauth_host: oauthHost,
-        auth_loc: (!customOAuthUrl) ? 'https://'+oauthHost+'/oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl
-                                    : customOAuthUrl,
+        auth_loc: (!customOAuthUrl) ? oauthURL : customOAuthUrl,
         add_broker_loc: 'https://'+oauthHost+'/addBroker?clientId='+appId+'&redirectURI='+redirectUrl,
+        login_page_loc: oauthURL + '&showLogin=true',
+        approval_page_loc : oauthURL + '&showApproval=true',
+        broker_signup_loc : 'https://' + oauthHost + '/brokerSignup',
         auth_window: null,
         authEndpoint : authEndpoint,
         accessToken : token,
@@ -131,16 +134,58 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return tradableEmbed.authenticate(brokerId);
             }
             console.log("Opening oauth window...");
-            tradableEmbed.auth_window = popupwindow(getAuthUrl(brokerId), 'osLaunch', 450, 450);
+            tradableEmbed.auth_window = popupwindow(getAuthUrl(brokerId), 'osLaunch');
         },
         /**
-         * Opens the add broker account flow in a popup window(on IE versions below Edge the flow will happen on the same page)
+         * Redirect to the Tradable Login page
          */
-        openAddBrokerWindow: function (){
-            if(ie()) {
-                window.open('https://api.tradable.com');
+        showLoginPage: function () {
+            tradableEmbed.openOAuthPage("LOGIN", true);
+        },
+        /**
+         * Open the Tradable Login page in a popup window
+         */
+        showLoginPageInWindow: function () {
+            tradableEmbed.openOAuthPage("LOGIN", false);
+        },
+        /**
+         * Redirect to the Tradable account approval page
+         */
+        showApprovalPage: function () {
+            tradableEmbed.openOAuthPage("APPROVAL", true);
+        },
+        /**
+         * Open the Tradable account approval page in a popup window
+         */
+        showApprovalPageInWindow: function () {
+            tradableEmbed.openOAuthPage("APPROVAL", false);
+        },
+        /**
+         * Redirect to the Tradable Broker sign up page that will allow the user to sign up with a broken
+         */
+        showBrokerSignUpPage: function () {
+            tradableEmbed.openOAuthPage("BROKER_SIGNUP", true);
+        },
+        /**
+         * Open the Tradable Broker sign up page that will allow the user to sign up with a broken in a popup window
+         */
+        showBrokerSignUpPageInWindow: function () {
+            tradableEmbed.openOAuthPage("BROKER_SIGNUP", false);
+        },
+        openOAuthPage: function (type, redirect) {
+            var url = (type.toUpperCase() === "LOGIN") ? tradableEmbed.login_page_loc :
+                      (type.toUpperCase() === "APPROVAL") ? tradableEmbed.approval_page_loc : 
+                      (type.toUpperCase() === "BROKER_SIGNUP") ? tradableEmbed.broker_signup_loc : undefined;
+            if(!url) {
+                console.error("Choose a correct type: LOGIN, APPROVAL or BROKER_SIGNUP");
+                return;
             }
-            tradableEmbed.auth_window = popupwindow(tradableEmbed.add_broker_loc, 'osAddBroker', 450, 450);
+            if((typeof redirect !== "undefined" && redirect) || ie()) {
+                location.href = url;
+            } else {
+                var windowName = 'os' + type.toUpperCase();
+                tradableEmbed.auth_window = popupwindow(url, windowName);
+            }
         },
         /**
          * Enables trading for the account corresponding to the given access token
@@ -148,7 +193,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {String} end_point   The endpoint to send API requests to
          * @param      {String} expires_in  The expiry date (in milliseconds) of the access token.
          */
-        enableWithAccessToken : function(access_token, end_point, expires_in){
+        enableWithAccessToken : function(access_token, end_point, expires_in) {
             tradableEmbed.enableTrading(access_token, end_point, expires_in, true);
         },
         /**
@@ -1368,13 +1413,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     }
 
-    function popupwindow(url, windowName, w, h){
+    function popupwindow(url, windowName){
         var wLeft = window.screenLeft ? window.screenLeft : window.screenX;
         var wTop = window.screenTop ? window.screenTop : window.screenY;
-        var left = wLeft + (window.innerWidth / 2) - (w / 2);
-        var top = wTop + (window.innerHeight / 2) - (h / 2);
+        var width = 420;
+        var height = 500;
+        var left = wLeft + (window.innerWidth / 2) - (width / 2);
+        var top = wTop + (window.innerHeight / 2) - (height / 2);
         return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, ' +
-            'scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+            'scrollbars=no, resizable=no, copyhistory=no, width=' + width + ', height=' + height + ', top=' + top + ', left=' + left);
     }
 
     function notifyReadyCallbacks() {
