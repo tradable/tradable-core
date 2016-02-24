@@ -36,6 +36,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
+    // Initialize config
     if(typeof tradableEmbedConfig !== "undefined") {
         appId = tradableEmbedConfig.appId;
         customOAuthUrl = tradableEmbedConfig.customOAuthURL;
@@ -54,13 +55,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             redirectUrl = rURI;
         }
     }
+    // URI encode the redirectUrl
+    redirectUrl = encodeURIComponent(redirectUrl);
 
     var oauthHost = "api.tradable.com";
     if(appId > 200000) { // Staging app-id
         oauthHost = "api-staging.tradable.com";
         console.log("Starting in staging mode...");
     }
-    var oauthURL = 'https://'+oauthHost+'/oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
+    var defaultOAuthURL = 'https://'+oauthHost+'/oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
+    var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
 
     var token = localStorage.getItem("accessToken:"+appId);
     var authEndpoint = localStorage.getItem("authEndpoint:"+appId);
@@ -85,11 +89,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var tradableEmbed = {
         app_id: appId,
         oauth_host: oauthHost,
-        auth_loc: (!customOAuthUrl) ? oauthURL : customOAuthUrl,
-        add_broker_loc: 'https://'+oauthHost+'/addBroker?clientId='+appId+'&redirectURI='+redirectUrl,
+        auth_loc: oauthURL,
         login_page_loc: oauthURL + '&showLogin=true',
         approval_page_loc : oauthURL + '&showApproval=true',
-        broker_signup_loc : 'https://' + oauthHost + '/brokerSignup',
+        broker_signup_loc : 'https://' + oauthHost + '/brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
         auth_window: null,
         authEndpoint : authEndpoint,
         accessToken : token,
@@ -100,6 +103,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradingEnabled : tradingEnabled,
         expirationTimeUTC : expirationTimeUTC,
         readyCallbacks : [],
+        allAccounts : [],
         accounts : [],
         accountIdsToExclude : [],
         accountMap: {},
@@ -118,9 +122,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         authenticate: function (brokerId) {
-            console.log("Starting oauth flow...");
             if (!tradableEmbed.tradingEnabled){
-                location.href = getAuthUrl(brokerId);
+                tradableEmbed.openOAuthPage("AUTHENTICATE", true, brokerId);
             } else {
                 validateToken();
             }
@@ -129,24 +132,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         authenticateWithWindow: function (brokerId){
-            if(ie()) {
-                console.log('Window opener no supported in IE, redirecting to oauth...');
-                return tradableEmbed.authenticate(brokerId);
-            }
-            console.log("Opening oauth window...");
-            tradableEmbed.auth_window = popupwindow(getAuthUrl(brokerId), 'osLaunch');
+            tradableEmbed.openOAuthPage("AUTHENTICATE", false, brokerId);
         },
         /**
          * Redirect to the Tradable Login page
+         * @param      {long} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
          */
-        showLoginPage: function () {
-            tradableEmbed.openOAuthPage("LOGIN", true);
+        showLoginPage: function (brokerId) {
+            tradableEmbed.openOAuthPage("LOGIN", true, brokerId);
         },
         /**
          * Open the Tradable Login page in a popup window
+         * @param      {long} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
          */
-        showLoginPageInWindow: function () {
-            tradableEmbed.openOAuthPage("LOGIN", false);
+        showLoginPageInWindow: function (brokerId) {
+            tradableEmbed.openOAuthPage("LOGIN", false, brokerId);
         },
         /**
          * Redirect to the Tradable account approval page
@@ -172,18 +172,22 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         showBrokerSignUpPageInWindow: function () {
             tradableEmbed.openOAuthPage("BROKER_SIGNUP", false);
         },
-        openOAuthPage: function (type, redirect) {
-            var url = (type.toUpperCase() === "LOGIN") ? tradableEmbed.login_page_loc :
+        openOAuthPage: function (type, redirect, brokerId) {
+            var url = (type.toUpperCase() === "AUTHENTICATE") ? tradableEmbed.auth_loc :
+                      (type.toUpperCase() === "LOGIN") ? tradableEmbed.login_page_loc :
                       (type.toUpperCase() === "APPROVAL") ? tradableEmbed.approval_page_loc : 
                       (type.toUpperCase() === "BROKER_SIGNUP") ? tradableEmbed.broker_signup_loc : undefined;
             if(!url) {
-                console.error("Choose a correct type: LOGIN, APPROVAL or BROKER_SIGNUP");
+                console.error("Choose a correct type: AUTHENTICATE, LOGIN, APPROVAL or BROKER_SIGNUP");
                 return;
+            }
+            if(typeof brokerId !== "undefined") {
+                url = url + "&broker_id=" + brokerId;
             }
             if((typeof redirect !== "undefined" && redirect) || ie()) {
                 location.href = url;
             } else {
-                var windowName = 'os' + type.toUpperCase();
+                var windowName = (type.toUpperCase() === "BROKER_SIGNUP") ? 'osBrokerSignUp' : 'osLaunch';
                 tradableEmbed.auth_window = popupwindow(url, windowName);
             }
         },
@@ -400,9 +404,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         setSelectedAccount : function (accountId, resolve, reject){
             if(!!tradableEmbed.accountMap[accountId]) {
+                tradableEmbed.lastSnapshot = undefined;
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
                 tradableEmbed.selectedAccountId = accountId;
-                console.log('accountId is set to: ' + accountId);
+                console.log('New accountId is set');
                 return initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
@@ -606,6 +611,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getAccounts : function (resolve, reject){
             var accountsPromise = tradableEmbed.makeAccountRequest("GET", "", "", null).then(function(data){
                 tradableEmbed.accounts.splice(0, tradableEmbed.accounts.length);
+                tradableEmbed.allAccounts.splice(0, tradableEmbed.allAccounts.length);
                 tradableEmbed.accountMap = {};
                 $(data.accounts).each(function(index, account){
                    if (!!account.uniqueId && account.uniqueId !== "NA" &&
@@ -613,6 +619,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                        tradableEmbed.accounts.push(account);
                        tradableEmbed.accountMap[account.uniqueId] = account;
                    }
+                   tradableEmbed.allAccounts.push(account);
                 });
             });
 
@@ -1295,17 +1302,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
             var deferred = new $.Deferred();
 
-            console.log("Activating TradableEmbed...");
+            console.log("Enabling Trading...");
+            tradableEmbed.tradingEnabled = false;
+            tradableEmbed.lastSnapshot = undefined;
 
             if(!!access_token && !!end_point) {
                 tradableEmbed.accessToken = access_token;
                 tradableEmbed.authEndpoint = end_point;
-                tradableEmbed.tradingEnabled = true;
 
                 if(isLocalStorageSupported()) {
                     localStorage.setItem("accessToken:"+appId, tradableEmbed.accessToken);
                     localStorage.setItem("authEndpoint:"+appId, tradableEmbed.authEndpoint);
-                    localStorage.setItem("tradingEnabled:"+appId, tradableEmbed.tradingEnabled);
 
                     if(!!expires_in) {
                         tradableEmbed.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in) * 1000); //expires conversion
@@ -1332,12 +1339,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function initializeLibrary(){
         var success = false;
         var opener = window.opener;
-        if(!!opener && window.name === "osAddBroker") {
-            try {
-                opener.tradableEmbed.enableTrading(undefined, undefined, undefined, true);
-            } catch(err) {}
-            window.close(); // execution stops
-        } else if(!!opener && window.name === "osLaunch"){
+        if(!!opener && window.name === "osBrokerSignUp") {
+            window.close();
+        } else if(!!opener && window.name === "osLaunch") {
             var hashFragment = window.location.hash;
             if(hashFragment) {
                 try {
@@ -1449,19 +1453,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function notifyAccountSwitchCallbacks() {
+        console.log("Notifying account switch");
         $(accountSwitchCallbacks).each(function(index, callback){
             callback();
         });
     }
 
     function initializeValuesForCurrentAccount(resolve, reject) {
-        console.log('Initializing values for current account');
         var reset = false;
         if(tradableEmbed.tradingEnabled) {
             tradableEmbed.tradingEnabled = false;
             reset = true;
         }
-        return tradableEmbed.getInstruments().then(function(acctInstruments){
+        return tradableEmbed.getInstruments().then(function(acctInstruments) {
             tradableEmbed.availableCategories.splice(0, tradableEmbed.availableCategories.length);
             tradableEmbed.availableInstruments.splice(0, tradableEmbed.availableInstruments.length);
             tradableEmbed.availableSymbols.splice(0, tradableEmbed.availableSymbols.length);
@@ -1489,10 +1493,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                      tradableEmbed.availableCategories.push(instrument.type);
                  }
             });
+            console.log('Instruments ready');
             if(reset) {
                 tradableEmbed.tradingEnabled = true;
+                notifyAccountSwitchCallbacks();
             }
-            notifyAccountSwitchCallbacks();
             if(!!resolve && typeof resolve === "function") {
                 return resolve(tradableEmbed.accounts);
             } else {
@@ -1540,7 +1545,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         }
         tradableEmbed.setSelectedAccount(accountId, function() {
-            notifyReadyCallbacks();
+            if(!tradableEmbed.tradingEnabled) {
+                tradableEmbed.tradingEnabled = true;
+                if(isLocalStorageSupported()) {
+                    localStorage.setItem("tradingEnabled:"+appId, tradableEmbed.tradingEnabled);
+                }
+                notifyReadyCallbacks();
+            }
             deferred.resolve();
         }, function(error) {
             deferred.reject(error);
