@@ -58,12 +58,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     // URI encode the redirectUrl
     redirectUrl = encodeURIComponent(redirectUrl);
 
-    var oauthHost = "api.tradable.com";
+    var oauthHost = "api.tradable.com/";
     if(appId > 200000) { // Staging app-id
-        oauthHost = "api-staging.tradable.com";
+        oauthHost = "api-staging.tradable.com/";
         console.log("Starting in staging mode...");
     }
-    var defaultOAuthURL = 'https://'+oauthHost+'/oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
+    var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
     var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
 
     var token = localStorage.getItem("accessToken:"+appId);
@@ -92,7 +92,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         auth_loc: oauthURL,
         login_page_loc: oauthURL + '&showLogin=true',
         approval_page_loc : oauthURL + '&showApproval=true',
-        broker_signup_loc : 'https://' + oauthHost + '/brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
+        broker_signup_loc : 'https://' + oauthHost + 'brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
         auth_window: null,
         authEndpoint : authEndpoint,
         accessToken : token,
@@ -362,8 +362,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     request.setRequestHeader("x-tr-embed-sdk", jsVersion);
                 },
                 crossDomain: true,
-                url: (!!accountId && accountId.length > 0) ? (endpoint+"/v1/"+reqType+"/"+accountId+"/"+method)
-                                                           : (endpoint+"/v1/"+reqType+"/"+method),
+                url: (!!accountId && accountId.length > 0) ? (endpoint+"v1/"+reqType+"/"+accountId+"/"+method)
+                                                           : (endpoint+"v1/"+reqType+"/"+method),
                 contentType: "application/json; charset=utf-8",
                 data: (!!postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
