@@ -333,6 +333,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 }
             }
         },
+        
+        offAllEvents: function() {
+            clearInterval(tradableEmbed.accountUpdateInterval);
+            tradableEmbed.readyCallbacks = [];
+            tokenWillExpireCallbacks = [];
+            errorCallbacks = [];
+            tokenExpirationCallbacks = [];
+            accountUpdatedCallbackHashes = [];
+            accountUpdatedCallbacks = [];
+            accountSwitchCallbacks = [];
+        },
         /**
          * Returns the remaining milliseconds for the token to expire
          * @return     {long} remainingMillis Remaining milliseconds for the token to expire
