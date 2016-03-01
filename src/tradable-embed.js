@@ -76,6 +76,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             localStorage.setItem("tradingEnabled:"+appId, tradingEnabled);
         }
     }
+
+    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"];
+    var callbackHolder = {};
     var accountSwitchCallbacks = [];
     var accountUpdatedCallbacks = [];
     var accountUpdatedCallbackHashes = [];
@@ -114,7 +117,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         availableCurrencies : [],
         lastSnapshot: null,
         symbolKeysForAccountUpdates: [],
-        accountUpdateInterval: null,
         accountUpdateMillis: 700,
         /**
          * Start oauth flow within the page
@@ -212,6 +214,76 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradableEmbed.tradingEnabled = false;
             notifyReadyCallbacks();
         },
+        isEventValid : function(eventName) {
+            return (typeof eventName === "string" && $.inArray(eventName, availableEvents) !== -1);
+        },
+        /**
+         * Add an event listener with an specific name that can be turned off calling 'off'.
+         * @param      {String} namespace    A unique name that will identify your listener and that you will have to use to turn the listener off 
+         * @param      {String} eventName   The available events are "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"
+         * @param      {Function} callback  Event listener callback function
+         */
+        on : function(namespace, eventName, callback) {
+            if(!tradableEmbed.isEventValid(eventName)) {
+                console.error("Plase provide a valid eventName: " + availableEvents);
+                return;
+            }
+
+            if(!callbackHolder[eventName]) {
+                // Initialize event callbacks
+                callbackHolder[eventName] = {};
+            }
+
+            // Check namespace validity
+            if(typeof namespace !== "string") {
+                console.error("The given event namespace is invalid (needs to be a string)");
+                return;
+            } else if(typeof callbackHolder[eventName][namespace] !== "undefined") {
+                console.error("The given event namespace is already taken, 'off' the event first to change it");
+                return;
+            }
+
+            // Check callback validity
+            if(typeof callback !== "function") {
+                console.error("Please provide a valid callback function");
+                return;
+            }
+
+            switch(eventName) {
+                case "embedReady":
+                    tradableEmbed.initEmbedReady(callback);
+                    break;
+                case "accountUpdated":
+                    tradableEmbed.initAccountUpdated();
+                    break;
+                case "tokenWillExpire":
+                    tradableEmbed.initTokenWillExpire();
+                    break;
+            }
+
+            callbackHolder[eventName][namespace] = callback;
+        },
+        /**
+         * Turn off an specific event listener with a namespace
+         * @param      {String} namespace    The unique name that identifies your listener 
+         * @param      {String} eventName(optional)   The event's name, if not specified all events for the given namespace will be turned off
+         */
+        off : function(namespace, eventName) {
+            if(typeof eventName === "undefined") {
+                for(var evtName in callbackHolder) {
+                    if(namespace in callbackHolder[evtName]) {
+                        delete callbackHolder[evtName][namespace];
+                    }
+                }
+            } else if(tradableEmbed.isEventValid(eventName) && !!callbackHolder[eventName] && (namespace in callbackHolder[eventName])) {
+                delete callbackHolder[eventName][namespace];
+            }
+        },
+        initEmbedReady : function(callback) {
+            if(tradableEmbed.notifiedCallbacks) {
+                callback();
+            }
+        },
         /**
          * Main library state notifier, called every time the state of tradingEnabled changes
          * @param      {Function} callback Callback function to be notified
@@ -219,8 +291,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         onEmbedReady : function (callback) {
             tradableEmbed.readyCallbacks.push(callback);
-            if(tradableEmbed.notifiedCallbacks) {
-                callback();
+            tradableEmbed.initEmbedReady(callback);
+        },
+        accountUpdateInterval: null,
+        initAccountUpdated : function() {
+            if(tradableEmbed.accountUpdateInterval === null) {
+                tradableEmbed.accountUpdateInterval = setInterval(processAccountUpdate, tradableEmbed.accountUpdateMillis);
             }
         },
         /**
@@ -230,9 +306,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         onAccountUpdated : function(callback) {
             if(!!callback) {
-                if(accountUpdatedCallbacks.length === 0) {
-                    tradableEmbed.accountUpdateInterval = setInterval(processAccountUpdate, tradableEmbed.accountUpdateMillis);
-                }
+                tradableEmbed.initAccountUpdated();
                 var callbackHash = hashCode(callback.toString());
                 if($.inArray(callbackHash, accountUpdatedCallbackHashes) === -1) {
                     accountUpdatedCallbacks.push(callback);
@@ -245,7 +319,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {long} accUpdateMillis Frequency in milliseconds
          */
         setAccountUpdateFrequencyMillis: function(accUpdateMillis) {
-            if(!!accUpdateMillis && accUpdateMillis > 0) {
+            if(!!accUpdateMillis && accUpdateMillis > 0 && typeof accUpdateMillis === "number") {
                 tradableEmbed.accountUpdateMillis = accUpdateMillis;
                 if(!!tradableEmbed.accountUpdateInterval) {
                     clearInterval(tradableEmbed.accountUpdateInterval);
@@ -313,16 +387,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 errorCallbacks.push(callback);
             }
         },
-        /**
-         * Gets called back every 5 minutes when the remaining token time is less than 30 minutes
-         * @param      {Function} callback Callback function to be notified
-         */
-        onTokenWillExpire: function(callback) {
-            if(tokenWillExpireCallbacks.length === 0) {
-                setInterval(processTokenWillExpire, 300000); // 5 minutes
-            }
-            if($.inArray(callback, tokenWillExpireCallbacks) === -1) {
-                tokenWillExpireCallbacks.push(callback);
+        tokenWillExpireInterval : null,
+        initTokenWillExpire : function() {
+            if(tradableEmbed.tokenWillExpireInterval === null) {
+                tradableEmbed.tokenWillExpireInterval = setInterval(processTokenWillExpire, 300000); // 5 minutes
             }
             function processTokenWillExpire() {
                 var remainingMillis = tradableEmbed.getRemainingTokenMillis();
@@ -330,7 +398,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     $(tokenWillExpireCallbacks).each(function(index, callback){
                         callback(remainingMillis);
                     });
+                    notifyNamespaceCallbacks("tokenWillExpire", remainingMillis);
                 }
+            }
+        },
+        /**
+         * Gets called back every 5 minutes when the remaining token time is less than 30 minutes
+         * @param      {Function} callback Callback function to be notified
+         */
+        onTokenWillExpire: function(callback) {
+            tradableEmbed.initTokenWillExpire();
+            if($.inArray(callback, tokenWillExpireCallbacks) === -1) {
+                tokenWillExpireCallbacks.push(callback);
             }
         },
         /**
@@ -370,8 +449,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             ajaxPromise.then(function(){},
                 function(jqXHR, message, error){
-                    if(!!jqXHR.responseJSON && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
-                        notifyTokenExpired();
+                    if(!!jqXHR.responseJSON) {
+                        if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
+                            notifyTokenExpired();
+                        }
                         notifyErrorCallbacks(jqXHR.responseJSON);
                     }
                 });
@@ -416,10 +497,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     }
                 },
                 function(err) {
-                    if(err.status === 502 || err.status === 403) {
+                    if(err.status === 502 || err.status === 500 || err.status === 403) {
                         tradableEmbed.excludeCurrentAccount();
                         if(tradableEmbed.accounts.length > 0) {
                             validateToken();
+                        } else {
+                            tradableEmbed.signOut();
                         }
                     }
                     if(!!reject) {
@@ -1427,37 +1510,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             'scrollbars=no, resizable=no, copyhistory=no, width=' + width + ', height=' + height + ', top=' + top + ', left=' + left);
     }
 
-    function notifyReadyCallbacks() {
-        $(tradableEmbed.readyCallbacks).each(function(index, callback){
-            callback();
-        });
-        tradableEmbed.notifiedCallbacks = true;
-    }
-
-    function notifyTokenExpired() {
-        tradableEmbed.tradingEnabled = false;
-        if(isLocalStorageSupported()) {
-            localStorage.setItem("tradingEnabled:"+appId, false);
-        }
-        $(tokenExpirationCallbacks).each(function(index, callback){
-            callback();
-        });
-        notifyReadyCallbacks();
-    }
-
-    function notifyErrorCallbacks(error) {
-        $(errorCallbacks).each(function(index, callback){
-            callback(error);
-        });
-    }
-
-    function notifyAccountSwitchCallbacks() {
-        console.log("Notifying account switch");
-        $(accountSwitchCallbacks).each(function(index, callback){
-            callback();
-        });
-    }
-
     function initializeValuesForCurrentAccount(resolve, reject) {
         var reset = false;
         if(tradableEmbed.tradingEnabled) {
@@ -1559,8 +1611,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return deferred;
     }
 
+    // Notify events
+
+    function notifyReadyCallbacks() {
+        $(tradableEmbed.readyCallbacks).each(function(index, callback) {
+            callback();
+        });
+        notifyNamespaceCallbacks("embedReady");
+        tradableEmbed.notifiedCallbacks = true;
+    }
+
     function processAccountUpdate() {
-        if(tradableEmbed.tradingEnabled && !processingUpdate) {
+        if(tradableEmbed.tradingEnabled && !processingUpdate &&
+            (accountUpdatedCallbacks.length > 0 || typeof callbackHolder["accountUpdated"] !== undefined)) {
             processingUpdate = true;
             var symbolArray = [];
             $(tradableEmbed.symbolKeysForAccountUpdates).each(function(idx, elem) {
@@ -1574,10 +1637,53 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 $.each(accountUpdatedCallbacks, function(idx, call) {
                     call(account);
                 });
+                notifyNamespaceCallbacks("accountUpdated", account);
                 processingUpdate = false;
             }, function() {
                 processingUpdate = false;
             });
+        }
+    }
+
+    function notifyTokenExpired() {
+        tradableEmbed.tradingEnabled = false;
+        if(isLocalStorageSupported()) {
+            localStorage.setItem("tradingEnabled:"+appId, false);
+        }
+        $(tokenExpirationCallbacks).each(function(index, callback) {
+            callback();
+        });
+        notifyNamespaceCallbacks("tokenExpired");
+        notifyReadyCallbacks();
+    }
+
+    function notifyErrorCallbacks(error) {
+        $(errorCallbacks).each(function(index, callback) {
+            callback(error);
+        });
+        notifyNamespaceCallbacks("error", error);
+    }
+
+    function notifyAccountSwitchCallbacks() {
+        $(accountSwitchCallbacks).each(function(index, callback) {
+            callback();
+        });
+        notifyNamespaceCallbacks("accountSwitch");
+    }
+
+    function notifyNamespaceCallbacks(eventName, data) {
+        if(tradableEmbed.isEventValid(eventName)) {
+            if(typeof callbackHolder[eventName] !== undefined) {
+                for(var namespace in callbackHolder[eventName]) {
+                    if(typeof data !== "undefined") {
+                        callbackHolder[eventName][namespace](data);
+                    } else {
+                        callbackHolder[eventName][namespace]();
+                    }
+                }
+            }
+        } else {
+            console.error("Careful, can't notify '" + eventName + "', it's an invalid event name");
         }
     }
 
