@@ -402,6 +402,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 }
             }
         },
+        
+        offAllEvents: function() {
+            clearInterval(tradableEmbed.accountUpdateInterval);
+            tradableEmbed.readyCallbacks = [];
+            tokenWillExpireCallbacks = [];
+            errorCallbacks = [];
+            tokenExpirationCallbacks = [];
+            accountUpdatedCallbackHashes = [];
+            accountUpdatedCallbacks = [];
+            accountSwitchCallbacks = [];
+        },
         /**
          * Gets called back every 5 minutes when the remaining token time is less than 30 minutes
          * @param      {Function} callback Callback function to be notified
