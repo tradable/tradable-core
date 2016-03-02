@@ -93,7 +93,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
-        login_page_loc: oauthURL + '&showLogin=true',
+        login_loc : oauthURL + '&showLogin=true',
         approval_page_loc : oauthURL + '&showApproval=true',
         broker_signup_loc : 'https://' + oauthHost + 'brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
         auth_window: null,
@@ -176,7 +176,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         openOAuthPage: function (type, redirect, brokerId) {
             var url = (type.toUpperCase() === "AUTHENTICATE") ? tradableEmbed.auth_loc :
-                      (type.toUpperCase() === "LOGIN") ? tradableEmbed.login_page_loc :
+                      (type.toUpperCase() === "LOGIN") ? tradableEmbed.login_loc :
                       (type.toUpperCase() === "APPROVAL") ? tradableEmbed.approval_page_loc : 
                       (type.toUpperCase() === "BROKER_SIGNUP") ? tradableEmbed.broker_signup_loc : undefined;
             if(!url) {
@@ -186,6 +186,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(typeof brokerId !== "undefined") {
                 url = url + "&broker_id=" + brokerId;
             }
+
             if((typeof redirect !== "undefined" && redirect) || ie()) {
                 location.href = url;
             } else {
@@ -206,6 +207,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Drops authentication token and notifies embed callbacks
          */
         signOut: function() {
+            internalSignOut();
             if(isLocalStorageSupported()) {
                 localStorage.removeItem("accessToken:"+appId);
                 localStorage.removeItem("authEndpoint:"+appId);
@@ -424,6 +426,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return (tradableEmbed.expirationTimeUTC - new Date().getTime());
         },
         makeOsRequest : function (reqType, type, accountId, method, postData, resolve, reject){
+            var version = (reqType === "internal") ? "" : "v1/";
             var endpoint;
             if(reqType !== "user" && reqType !== "accounts") {
                 endpoint = 'https://'+oauthHost;
@@ -441,8 +444,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     request.setRequestHeader("x-tr-embed-sdk", jsVersion);
                 },
                 crossDomain: true,
-                url: (!!accountId && accountId.length > 0) ? (endpoint+"v1/"+reqType+"/"+accountId+"/"+method)
-                                                           : (endpoint+"v1/"+reqType+"/"+method),
+                url: (!!accountId && accountId.length > 0) ? (endpoint + version + reqType + "/" + accountId + "/" + method)
+                                                           : (endpoint + version + reqType + "/" + method),
                 contentType: "application/json; charset=utf-8",
                 data: (!!postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
@@ -1700,6 +1703,24 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         } else {
             return deferred;
         }
+    }
+
+    function internalSignOut() {
+        var deferred = new $.Deferred();
+
+        if(!tradableEmbed.tradingEnabled || tradableEmbed.selectedAccount.brokerId < 0) {
+            deferred.resolve();
+            return deferred;
+        }
+
+        var signOutData = {tokenValue: tradableEmbed.accessToken};
+        tradableEmbed.makeOsRequest("internal", "POST", "", "signOut", signOutData).then(function() {
+            deferred.resolve();
+        }, function() {
+            deferred.reject();
+        });
+
+        return deferred;
     }
 
     function getAuthUrl(brokerId) {
