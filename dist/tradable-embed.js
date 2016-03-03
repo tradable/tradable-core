@@ -36,10 +36,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
+    var customOAuthHost;
     // Initialize config
     if(typeof tradableEmbedConfig !== "undefined") {
         appId = tradableEmbedConfig.appId;
         customOAuthUrl = tradableEmbedConfig.customOAuthURL;
+        customOAuthHost = tradableEmbedConfig.customOAuthHost;
         if(!!tradableEmbedConfig.redirectURI) {
             redirectUrl = tradableEmbedConfig.redirectURI;
         }
@@ -50,6 +52,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
         appId = $('#'+scriptId).attr("data-app-id");
         customOAuthUrl = $('#'+scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
+        customOAuthHost = $('#'+scriptId).attr("data-custom-oauth-host");
         var rURI = $('#'+scriptId).attr("data-redirect-uri");
         if(!!rURI) {
             redirectUrl = rURI;
@@ -62,6 +65,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     if(appId > 200000) { // Staging app-id
         oauthHost = "api-staging.tradable.com/";
         console.log("Starting in staging mode...");
+    }
+    if(!!customOAuthHost) {
+        oauthHost = customOAuthHost;
     }
     var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
     var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
@@ -440,10 +446,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var ajaxPromise = $.ajax({
                 type: type,
                 beforeSend: function (request) {
-                    request.setRequestHeader("Authorization", "Bearer " + tradableEmbed.accessToken);
+                    if(reqType !== "internal") {
+                        request.setRequestHeader("Authorization", "Bearer " + tradableEmbed.accessToken);
+                    }
                     request.setRequestHeader("x-tr-embed-sdk", jsVersion);
                 },
                 crossDomain: true,
+                xhrFields: {
+                    withCredentials: true
+                },
                 url: (!!accountId && accountId.length > 0) ? (endpoint + version + reqType + "/" + accountId + "/" + method)
                                                            : (endpoint + version + reqType + "/" + method),
                 contentType: "application/json; charset=utf-8",
@@ -1708,7 +1719,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function internalSignOut() {
         var deferred = new $.Deferred();
 
-        if(!tradableEmbed.tradingEnabled || tradableEmbed.selectedAccount.brokerId < 0) {
+        if(!tradableEmbed.tradingEnabled 
+            || (tradableEmbed.selectedAccount.brokerId < 0 && tradableEmbed.allAccounts.length === 1)) {
             deferred.resolve();
             return deferred;
         }
