@@ -1,4 +1,5 @@
 # tradable-embed-core
+[![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core)
 
 Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.
 
