@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.14  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.14.1  ******/
 
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
@@ -19,7 +19,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
      *
      * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
      * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
-     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.14/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
+     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.14.1/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
      * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
      * <pre>npm install tradable-embed-core</pre>
      * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
@@ -32,7 +32,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.14";
+    var jsVersion = "js-1.14.1";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -96,6 +96,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     //Actual library obj
     var tradableEmbed = {
+        version : '1.14.1',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -1175,8 +1176,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price
-         * @param      {double} takeprofit Take Profit price
+         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1188,14 +1189,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price
-         * @param      {double} takeprofit Take Profit price
+         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
         addOrModifyProtectionsForAccount : function (accountId, positionId, takeProfit, stopLoss, resolve, reject) {
-            var protection = {"takeprofit": takeProfit, "stoploss": stopLoss};
+            var protection = {};
+            if(takeProfit !== null) {
+                protection["takeprofit"] = takeProfit;
+            }
+            if(stopLoss !== null) {
+                protection["stoploss"] = stopLoss;
+            }
             return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId+"/protections/", protection, resolve, reject);
         },
         /**

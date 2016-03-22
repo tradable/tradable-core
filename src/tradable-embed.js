@@ -95,6 +95,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     //Actual library obj
     var tradableEmbed = {
+        version : 'trEmbDevVersionX',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -1174,8 +1175,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price
-         * @param      {double} takeprofit Take Profit price
+         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1187,14 +1188,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price
-         * @param      {double} takeprofit Take Profit price
+         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
         addOrModifyProtectionsForAccount : function (accountId, positionId, takeProfit, stopLoss, resolve, reject) {
-            var protection = {"takeprofit": takeProfit, "stoploss": stopLoss};
+            var protection = {};
+            if(takeProfit !== null) {
+                protection["takeprofit"] = takeProfit;
+            }
+            if(stopLoss !== null) {
+                protection["stoploss"] = stopLoss;
+            }
             return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId+"/protections/", protection, resolve, reject);
         },
         /**
