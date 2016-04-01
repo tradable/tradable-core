@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.14.1  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.15  ******/
 
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
@@ -19,7 +19,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
      *
      * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
      * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
-     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.14.1/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
+     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.15/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
      * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
      * <pre>npm install tradable-embed-core</pre>
      * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
@@ -32,7 +32,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.14.1";
+    var jsVersion = "js-1.15";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -96,7 +96,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     //Actual library obj
     var tradableEmbed = {
-        version : '1.14.1',
+        version : '1.15',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -795,6 +795,38 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getInstrumentsForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "instruments/", null, resolve, reject);
         },
+         /**
+         * If the account requires you to search for instruments, you have to use this method to get the instrument information for the selectedAccount
+         * @param      {Array} symbols Array of symbols for the wanted prices
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        getSymbolsInstruments : function (symbols, resolve, reject){
+            return tradableEmbed.getSymbolsInstrumentsForAccount(tradableEmbed.selectedAccountId, symbols, resolve, reject);
+        },
+         /**
+         * If the account requires you to search for instruments, you have to use this method to get the instrument information for a specific accountId
+         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {Array} symbols Array of symbols for the wanted prices
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        getSymbolsInstrumentsForAccount : function (accountId, symbols, resolve, reject){
+            var deferred = new $.Deferred();
+
+            var symbolsObj = {"symbols": symbols};
+
+            tradableEmbed.makeAccountRequest("POST", accountId, "instruments/", symbolsObj).then(function(instruments) {
+                cacheInstruments(instruments.instruments);
+                deferred.resolve(instruments);
+            }, function(error) {
+                deferred.reject(error);
+            });
+
+            return resolveDeferred(deferred, resolve, reject);
+        },
         //v1/accounts/{accountId}/metrics
          /**
          * The users balance and other account metrics for the selectedAccount
@@ -1346,7 +1378,36 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         getPricesForAccount : function (accountId, symbols, resolve, reject) {
             var symbolsObj = {"symbols": symbols};
-            return tradableEmbed.makeAccountRequest("POST", accountId, "prices/", symbolsObj, resolve, reject);
+
+            if(isFullInstrumentListAvailable()) {
+                return tradableEmbed.makeAccountRequest("POST", accountId, "prices/", symbolsObj, resolve, reject);
+            } else {
+                var deferred = new $.Deferred();
+
+                var missingSymbols = [];
+                $(symbols).each(function(idx, symbol) {
+                    if(typeof cachedSymbols[symbol] === "undefined") {
+                        missingSymbols.push(symbol);
+                    }
+                });
+
+                var promise;
+                if(!!missingSymbols.length) {
+                    promise = tradableEmbed.getSymbolsInstrumentsForAccount(accountId, missingSymbols).then(function() {
+                        return tradableEmbed.makeAccountRequest("POST", accountId, "prices/", symbolsObj);
+                    });
+                } else {
+                    promise = tradableEmbed.makeAccountRequest("POST", accountId, "prices/", symbolsObj);
+                }
+                
+                promise.then(function(data) {
+                    deferred.resolve(data);
+                }, function(error) {
+                    deferred.reject(error);
+                });
+
+                return resolveDeferred(deferred, resolve, reject);
+            }
         },
         makeCandleRequest : function (method, symbolsArray, resolve, reject, postObject) {
             var symbolsObj = {symbols: symbolsArray};
@@ -1538,14 +1599,63 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradableEmbed.tradingEnabled = false;
             reset = true;
         }
-        return tradableEmbed.getInstruments().then(function(acctInstruments) {
-            tradableEmbed.availableCategories.splice(0, tradableEmbed.availableCategories.length);
-            tradableEmbed.availableInstruments.splice(0, tradableEmbed.availableInstruments.length);
-            tradableEmbed.availableSymbols.splice(0, tradableEmbed.availableSymbols.length);
-            tradableEmbed.availableCurrencies.splice(0, tradableEmbed.availableCurrencies.length);
 
-            var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
-            $(acctInstruments).each(function(index, instrument){
+        resetInstrumentCache();
+        return getDefaultInstruments().then(function(acctInstruments) {
+            console.log('Instruments ready');
+            if(reset) {
+                tradableEmbed.tradingEnabled = true;
+                notifyAccountSwitchCallbacks();
+            }
+            if(!!resolve && typeof resolve === "function") {
+                return resolve(tradableEmbed.accounts);
+            } else {
+                return this;
+            }
+            //return
+        }, function(error) {
+            if(!!reject && typeof reject === "function") {
+                return reject(error);
+            } else {
+                return this;
+            }
+        });
+    }
+
+    function isFullInstrumentListAvailable() {
+        return (tradableEmbed.selectedAccount.instrumentRetrieval === "FULL_INSTRUMENT_LIST");
+    }
+
+    function getDefaultInstruments() {
+        var deferred = new $.Deferred();
+
+        if(isFullInstrumentListAvailable()) {
+            tradableEmbed.getInstruments().then(function(acctInstruments) {
+                cacheInstruments(acctInstruments);
+                deferred.resolve(tradableEmbed.availableInstruments);
+            });
+        } else {
+            tradableEmbed.getPrices(["EUR/USD", "USD/JPY", "GBP/USD", "USD/CAD", "USD/CHF", "AUD/USD", "EUR/JPY", "EUR/CHF", "EUR/CAD", "EUR/GBP", "EUR/AUD", "NZD/USD"]).then(function() {
+                deferred.resolve(tradableEmbed.availableInstruments);
+            });
+        }
+
+        return deferred;
+    }
+
+    var cachedSymbols = {};
+    function resetInstrumentCache() {
+        tradableEmbed.availableCategories.splice(0, tradableEmbed.availableCategories.length);
+        tradableEmbed.availableInstruments.splice(0, tradableEmbed.availableInstruments.length);
+        tradableEmbed.availableSymbols.splice(0, tradableEmbed.availableSymbols.length);
+        tradableEmbed.availableCurrencies.splice(0, tradableEmbed.availableCurrencies.length);
+        cachedSymbols = {};
+    }
+    function cacheInstruments(instruments) {
+        var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
+
+        $(instruments).each(function(index, instrument){
+            if(typeof cachedSymbols[instrument.symbol] === "undefined") {
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
 
@@ -1565,23 +1675,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  if ($.inArray(instrument.type, tradableEmbed.availableCategories) === -1){
                      tradableEmbed.availableCategories.push(instrument.type);
                  }
-            });
-            console.log('Instruments ready');
-            if(reset) {
-                tradableEmbed.tradingEnabled = true;
-                notifyAccountSwitchCallbacks();
-            }
-            if(!!resolve && typeof resolve === "function") {
-                return resolve(tradableEmbed.accounts);
-            } else {
-                return this;
-            }
-            //return
-        }, function(error) {
-            if(!!reject && typeof reject === "function") {
-                return reject(error);
-            } else {
-                return this;
+
+                 cachedSymbols[instrument.symbol] = true;
             }
         });
     }
