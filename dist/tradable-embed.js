@@ -117,9 +117,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         accounts : [],
         accountIdsToExclude : [],
         accountMap: {},
+        /**
+         * The current user's active trading account. When "onEmbedReady" is called and "tradingEnabled" is true, it is already set and the instruments are initialized for it. 
+         */
         selectedAccount : null,
         selectedAccountId : null,
         availableCategories : [],
+        /**
+         * List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
+         */
         availableInstruments : [],
         availableSymbols : [],
         availableCurrencies : [],
@@ -777,26 +783,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         //v1/accounts/{accountId}/instruments
          /**
-         * Returns a list of instruments available for the selectedAccount
-         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
-         * @param      {Function} reject(optional) Error callback for the API call
-         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         */
-        getInstruments : function (resolve, reject){
-            return tradableEmbed.getInstrumentsForAccount(tradableEmbed.selectedAccountId, resolve, reject);
-        },
-         /**
-         * Returns a list of instruments available for a specific accountId
-         * @param      {String} uniqueId The unique id for the account the request goes to
-         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
-         * @param      {Function} reject(optional) Error callback for the API call
-         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         */
-        getInstrumentsForAccount : function (accountId, resolve, reject){
-            return tradableEmbed.makeAccountRequest("GET", accountId, "instruments/", null, resolve, reject);
-        },
-         /**
-         * If the account requires you to search for instruments, you have to use this method to get the instrument information for the selectedAccount
+         * Get the instrument information for a set of symbols for the selectedAccount
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -806,7 +793,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradableEmbed.getSymbolsInstrumentsForAccount(tradableEmbed.selectedAccountId, symbols, resolve, reject);
         },
          /**
-         * If the account requires you to search for instruments, you have to use this method to get the instrument information for a specific accountId
+         * Get the instrument information for a set of symbols for for a specific accountId
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {Array} symbols Array of symbols for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -816,16 +803,89 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getSymbolsInstrumentsForAccount : function (accountId, symbols, resolve, reject){
             var deferred = new $.Deferred();
 
-            var symbolsObj = {"symbols": symbols};
+            var missingSymbols = [];
+            if(!isFullInstrumentListAvailable()) {
+                $(symbols).each(function(idx, symbol) {
+                    if(!isInstrumentCached(symbol)) {
+                        missingSymbols.push(symbol);
+                    }
+                });
+            }
 
-            tradableEmbed.makeAccountRequest("POST", accountId, "instruments/", symbolsObj).then(function(instruments) {
-                cacheInstruments(instruments.instruments);
-                deferred.resolve(instruments);
+            var instrumentDeferred = new $.Deferred();
+            if(!!missingSymbols.length) {
+                var symbolsObj = {"symbols": missingSymbols};
+                tradableEmbed.makeAccountRequest("POST", accountId, "instruments/", symbolsObj).then(function(instruments) {
+                    cacheInstruments(instruments.instruments);
+                    instrumentDeferred.resolve();
+                });
+            } else {
+                instrumentDeferred.resolve();
+            }
+
+            instrumentDeferred.then(function() {
+                var instrumentResult = [];
+                $(symbols).each(function(idx, symbol) {
+                    instrumentResult.push(tradableEmbed.getInstrumentFromSymbol(symbol));
+                });
+                deferred.resolve({"instruments": instrumentResult});
             }, function(error) {
                 deferred.reject(error);
             });
 
             return resolveDeferred(deferred, resolve, reject);
+        },
+        /**
+         * Search for instruments with a specific String for the selectedAccount.
+         * @param      {String} query The query used in an instrument search
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        searchInstruments : function (query, resolve, reject){
+            return tradableEmbed.searchInstrumentsForAccount(tradableEmbed.selectedAccountId, query, resolve, reject);
+        },
+        /**
+         * Search for instruments with a specific String for a specific accountId.
+         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} query The query used in an instrument search
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        searchInstrumentsForAccount : function (accountId, query, resolve, reject){
+            var deferred = new $.Deferred();
+
+            if(isFullInstrumentListAvailable()) {
+                var result = matchInstruments(query);
+                deferred.resolve(result);
+            } else {
+                var queryObj = {"query": query};
+                if(query.length < 2) {
+                    deferred.resolve([]);
+                } else {
+                    tradableEmbed.makeAccountRequest("POST", accountId, "instrumentsearch/", queryObj).then(function(searchResult) {
+                        return tradableEmbed.getSymbolsInstruments(searchResult.symbols);
+                    }).then(function(instruments) {
+                        deferred.resolve(instruments.instruments);
+                    }, function(error) {
+                        deferred.reject(error);
+                    });
+                }
+            }
+
+            return resolveDeferred(deferred, resolve, reject);
+
+            function matchInstruments(query) {
+                var matcher = new RegExp( $.ui.autocomplete.escapeRegex( query ), "i" );
+                var result = $.grep(tradableEmbed.availableInstruments, function(value) {
+                    return matcher.test(value.symbol) 
+                        || matcher.test(value.brokerageAccountSymbol)
+                        || matcher.test(value.displayName) 
+                        || matcher.test(value.type);
+                });
+                return result;
+            }
         },
         //v1/accounts/{accountId}/metrics
          /**
@@ -1386,7 +1446,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
                 var missingSymbols = [];
                 $(symbols).each(function(idx, symbol) {
-                    if(typeof cachedSymbols[symbol] === "undefined") {
+                    if(!isInstrumentCached(symbol)) {
                         missingSymbols.push(symbol);
                     }
                 });
@@ -1622,15 +1682,31 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         });
     }
 
+     
+    // Returns a list of instruments available for the selectedAccount
+    // @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+    // @param      {Function} reject(optional) Error callback for the API call
+    // @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+    function getInstruments(resolve, reject){
+        return getInstrumentsForAccount(tradableEmbed.selectedAccountId, resolve, reject);
+    }
+    // Returns a list of instruments available for a specific accountId
+    // @param      {String} uniqueId The unique id for the account the request goes to
+    // @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+    // @param      {Function} reject(optional) Error callback for the API call
+    // @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+    function getInstrumentsForAccount(accountId, resolve, reject){
+        return tradableEmbed.makeAccountRequest("GET", accountId, "instruments/", null, resolve, reject);
+    }
+
     function isFullInstrumentListAvailable() {
         return (tradableEmbed.selectedAccount.instrumentRetrieval === "FULL_INSTRUMENT_LIST");
     }
-
     function getDefaultInstruments() {
         var deferred = new $.Deferred();
 
         if(isFullInstrumentListAvailable()) {
-            tradableEmbed.getInstruments().then(function(acctInstruments) {
+            getInstruments().then(function(acctInstruments) {
                 cacheInstruments(acctInstruments);
                 deferred.resolve(tradableEmbed.availableInstruments);
             });
@@ -1651,11 +1727,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradableEmbed.availableCurrencies.splice(0, tradableEmbed.availableCurrencies.length);
         cachedSymbols = {};
     }
+    function isInstrumentCached(symbol) {
+        return (typeof cachedSymbols[symbol] !== "undefined");
+    }
     function cacheInstruments(instruments) {
         var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
 
         $(instruments).each(function(index, instrument){
-            if(typeof cachedSymbols[instrument.symbol] === "undefined") {
+            if(!isInstrumentCached(instrument.symbol)) {
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
 
@@ -1751,6 +1830,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             });
             tradableEmbed.getSnapshot(symbolArray).then(function(account) {
                 tradableEmbed.lastSnapshot = account;
+                return checkInstrumentsToCache(account);
+            }).then(function(account) {
                 $.each(accountUpdatedCallbacks, function(idx, call) {
                     call(account);
                 });
@@ -1758,8 +1839,34 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 processingUpdate = false;
             }, function() {
                 processingUpdate = false;
-            });
+            })
         }
+    }
+
+    function checkInstrumentsToCache(snapshot) {
+        var deferred = new $.Deferred();
+
+        if(isFullInstrumentListAvailable()) {
+            deferred.resolve(snapshot);
+        } else {
+            var missingSymbols = [];
+            var addMissing = function(idx, item) {
+                if(!isInstrumentCached(item.symbol)) {
+                    missingSymbols.push(item.symbol);
+                }
+            };
+            $(snapshot.positions.open).each(addMissing);
+            $(snapshot.orders.pending).each(addMissing);
+            if(!!missingSymbols.length) {
+                tradableEmbed.getSymbolsInstruments(missingSymbols).then(function() {
+                    deferred.resolve(snapshot);
+                });
+            } else {
+                deferred.resolve(snapshot);
+            }
+        }
+
+        return deferred;
     }
 
     function notifyTokenExpired() {
