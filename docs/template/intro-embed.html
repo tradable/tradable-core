@@ -1,0 +1,99 @@
+
+<style type="text/css">
+     pre.intro {
+         display: block;
+         padding: 9.5px;
+         margin: 0 0 10px;
+         font-size: 13px;
+         line-height: 20px;
+         word-break: break-all;
+         word-wrap: break-word;
+         white-space: pre;
+         white-space: pre-wrap;
+         background-color: #f5f5f5;
+         border: 1px solid #ccc;
+         border: 1px solid rgba(0, 0, 0, 0.15);
+         -webkit-border-radius: 4px;
+         -moz-border-radius: 4px;
+         border-radius: 4px;
+         overflow-x: hidden;
+         padding: 5px;
+         font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+         font-size: 14px !important;
+         color: #333333;
+         -webkit-border-radius: 3px;
+         -moz-border-radius: 3px;
+         border-radius: 3px;
+     }
+     .container {
+          max-width: 80%;
+     }
+     .documentation {
+          background: #F8F8F8;
+     }
+     .documentation a {
+          font-weight: normal;
+          font-size: 14px;
+     }
+     @media (min-width: 52em) {
+          .fix-margin-3 {
+              margin-left: 310px;
+          }
+     }
+     .fix-3 {
+         width: 25%;
+         max-width: 300px;
+         overflow-x: hidden; 
+     }
+     .fix-margin-3 {
+        background: white;
+        border: 1px solid #DDDDDD;
+        border-radius: 3px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+     }
+     #toc {
+          margin-top: 1rem;
+     }
+     /** Scrollbar style **/
+     .fix-3::-webkit-scrollbar-track
+     {
+          -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+          background-color: #F5F5F5;
+     }
+
+     .fix-3::-webkit-scrollbar
+     {
+          width: 3px;
+          background-color: #F5F5F5;
+     }
+
+     .fix-3::-webkit-scrollbar-thumb
+     {
+          background-color: #494747;
+     }
+
+</style>
+
+<div style="padding: 1rem;">
+     Welcome to the tradable-embed documentation. Tradable Embed is an open API to easily build financial trading features into any app, through any brokerage. This is the documentation for the tradable-embed javascript SDK, which offers 2 kits:
+
+     <ul>
+          <li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li>
+          <li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li>
+     </ul>
+
+     <p>In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':</p>
+
+     <pre class="intro">&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;<br>&lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/1.15/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
+
+     <p>Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a></p>
+
+     <pre class="intro">npm install tradable-embed-core --save</pre>
+
+     <p>If you do, you will have to define the tradableEmbedConfig object before requiring the module:</p>
+
+     <pre class="intro">window.tradableEmbedConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-embed-core");</pre>
+
+     <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
+</div>

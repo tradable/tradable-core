@@ -12,20 +12,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     // It's good practice
     'use strict';
 
-     /**
-     * Welcome to the tradable-embed documentation. Tradable Embed is an open API to easily build financial trading features into any app, through any brokerage. This is the documentation for the tradable-embed javascript SDK, which offers 2 kits:
-     * <ul><li><b>core</b>: Lightweight wrapper of the Tradable Embed API that will make the integration with Tradable Embed API really easy.</li><li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li></ul>
-     *
-     * In order to use the tradable-embed core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>) and we assign it to the variable 'trEmbJQ':
-     * <pre>&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;
-     * &lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/trEmbDevVersionX/tradable-embed.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
-     * Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-embed-core">npm module</a>
-     * <pre>npm install tradable-embed-core</pre>
-     * If you do, you will have to define the tradableEmbedConfig object before requiring the module:
-     * <pre>window.tradableEmbedConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-embed-core")</pre>
-     * <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
-     *//**/
-
     // Avoid console errors when not supported
     if (typeof console === "undefined" || typeof console.log === "undefined") {
         global.console = { log: function() {} };
@@ -133,7 +119,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         accountUpdateMillis: 700,
         /**
          * Start oauth flow within the page
-         * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
+         * @param      {number} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         authenticate: function (brokerId) {
             if (!tradableEmbed.tradingEnabled){
@@ -143,21 +129,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
         },
         /**
-         * @param      {long} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
+         * @param      {number} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         authenticateWithWindow: function (brokerId){
             tradableEmbed.openOAuthPage("AUTHENTICATE", false, brokerId);
         },
         /**
          * Redirect to the Tradable Login page
-         * @param      {long} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
+         * @param      {number} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         showLoginPage: function (brokerId) {
             tradableEmbed.openOAuthPage("LOGIN", true, brokerId);
         },
         /**
          * Open the Tradable Login page in a popup window
-         * @param      {long} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
+         * @param      {number} brokerId(optional) If the login page needs to be opened for a certain broker, this is the id (v1/brokers)
          */
         showLoginPageInWindow: function (brokerId) {
             tradableEmbed.openOAuthPage("LOGIN", false, brokerId);
@@ -301,8 +287,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Main library state notifier, called every time the state of tradingEnabled changes
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/avPzgP/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} callback Callback function to be notified
-         * @jsFiddle http://codepen.io/tradableEmbed/embed/avPzgP/?height=268&theme-id=21042&default-tab=js
          */
         onEmbedReady : function (callback) {
             tradableEmbed.readyCallbacks.push(callback);
@@ -316,8 +302,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Gets notified with a new account snapshot every certain time (700 millis by default)
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/rObOqE/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} callback Callback function to be notified
-         * @jsFiddle http://codepen.io/tradableEmbed/embed/rObOqE/?height=268&theme-id=21042&default-tab=js
          */
         onAccountUpdated : function(callback) {
             if(!!callback) {
@@ -331,7 +317,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Customize the frequency for account snapshot updates (onAccountUpdated)
-         * @param      {long} accUpdateMillis Frequency in milliseconds
+         * @param      {number} accUpdateMillis Frequency in milliseconds
          */
         setAccountUpdateFrequencyMillis: function(accUpdateMillis) {
             if(!!accUpdateMillis && accUpdateMillis > 0 && typeof accUpdateMillis === "number") {
@@ -428,7 +414,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Returns the remaining milliseconds for the token to expire
-         * @return     {long} remainingMillis Remaining milliseconds for the token to expire
+         * @return     {number} remainingMillis Remaining milliseconds for the token to expire
          */
         getRemainingTokenMillis : function() {
             if(!tradableEmbed.expirationTimeUTC) {
@@ -547,6 +533,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Returns the correspondent instrument obj to the symbol if it's in the current account
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
+         * @example
+         * _object-begin_Instrument_object-end_
          */
         getInstrumentFromSymbol : function(symbol) {
             if(!symbol) {
@@ -564,7 +552,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Returns the correspondent instrument obj to the instrumentId if it's in the current account
          * @param      {String}   instrumentId Instrument id
-         * @return      {Object} Correspondent instrument obj to the symbol or null if not found
+         * @return      {Object} Correspondent instrument obj to the id or null if not found
          */
         getInstrumentFromId : function(instrumentId) {
             if(!instrumentId) {
@@ -642,7 +630,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         //v1/authenticate
         /**
          * Gets a token granting access to the account(s) associated with the given login and enables trading
-         * @param      {long} brokerId  The id of the broker that the account is at
+         * @param      {number} brokerId  The id of the broker that the account is at
          * @param      {String} login The login for the account
          * @param      {String} password The password for the account
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -731,10 +719,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         //v1/accounts
         /**
          * Initializes the tradableEmbed.accountsMap and the tradableEmbed.accounts list
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/ZbZWbe/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         * @jsFiddle http://codepen.io/tradableEmbed/embed/ZbZWbe/?height=268&theme-id=21042&default-tab=js
          */
         getAccounts : function (resolve, reject){
             var accountsPromise = tradableEmbed.makeAccountRequest("GET", "", "", null).then(function(data){
@@ -757,9 +745,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Provides candles for the selectedAccount, given symbol, aggregation and range (from-to)
          * @param      {String} symbol The symbol to get candles for
-         * @param      {long} from The start of the candle range. In milliseconds since epoch
-         * @param      {long} to The end of the candle range. In milliseconds since epoch
-         * @param      {int} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
+         * @param      {number} from The start of the candle range. In milliseconds since epoch
+         * @param      {number} to The end of the candle range. In milliseconds since epoch
+         * @param      {number} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -771,9 +759,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Provides candles for a specific account, the given symbol, aggregation and range (from-to)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} symbol The symbol to get candles for
-         * @param      {long} from The start of the candle range. In milliseconds since epoch
-         * @param      {long} to The end of the candle range. In milliseconds since epoch
-         * @param      {int} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
+         * @param      {number} from The start of the candle range. In milliseconds since epoch
+         * @param      {number} to The end of the candle range. In milliseconds since epoch
+         * @param      {number} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -807,7 +795,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         //v1/accounts/{accountId}/instruments
          /**
-         * Get the instrument information for a set of symbols for the selectedAccount
+         * Get the instrument information for a set of instrument Ids for the selectedAccount
          * @param      {Array} instrumentIds Array of instrument Ids for the wanted instruments
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -817,7 +805,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradableEmbed.getInstrumentsFromIdsForAccount(tradableEmbed.selectedAccountId, instrumentIds, resolve, reject);
         },
          /**
-         * Get the instrument information for a set of symbols for for a specific accountId
+         * Get the instrument information for a set of instrument Ids for for a specific accountId
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {Array} instrumentIds Array of instrument Ids for the wanted instruments
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -951,7 +939,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
          /**
          * Place a MARKET order on the selectedAccount
-         * @param      {double} amount The order amount
+         * @param      {number} amount The order amount
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -964,7 +952,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          /**
          * Place a MARKET order on a specific account
          * @param      {String} uniqueId The unique id for the account the request goes to
-         * @param      {double} amount The order amount
+         * @param      {number} amount The order amount
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -976,8 +964,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
          /**
          * Place a LIMIT order on the selectedAccount
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -990,8 +978,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          /**
          * Place a LIMIT order on a specific account
          * @param      {String} uniqueId The unique id for the account the request goes to
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order.
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order.
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1003,8 +991,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
          /**
          * Place a STOP order on the selectedAccount
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1017,8 +1005,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          /**
          * Place a STOP order on a specific account
          * @param      {String} uniqueId The unique id for the account the request goes to
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order.
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order.
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1037,13 +1025,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
          /**
          * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selectedAccount
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
-         * @param      {double} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {double} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {number} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {number} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1054,13 +1042,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          /**
          * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account
          * @param      {String} uniqueId The unique id for the account the request goes to
-         * @param      {double} amount The order amount
-         * @param      {double} price The trigger price for the order
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
-         * @param      {double} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {double} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {number} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
+         * @param      {number} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1290,8 +1278,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
-         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
+         * @param      {number} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {number} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1303,8 +1291,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
          * @param      {String} uniqueId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
-         * @param      {double} stoploss Stop Loss price (Set to null if not wanted)
-         * @param      {double} takeprofit Take Profit price (Set to null if not wanted)
+         * @param      {number} stoploss Stop Loss price (Set to null if not wanted)
+         * @param      {number} takeprofit Take Profit price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers

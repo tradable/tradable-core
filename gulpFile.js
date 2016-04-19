@@ -4,10 +4,13 @@ var gulp = require('gulp'),
     rename = require('gulp-rename'),
     uglify = require('gulp-uglify'),
     gutil = require("gulp-util"),
-    license = require('gulp-header-license');
+    license = require('gulp-header-license'),
     replace = require('gulp-replace'),
     gulpDoxx = require('gulp-doxx'),
-    clean = require('gulp-clean');
+    clean = require('gulp-clean'),
+    documentation = require('gulp-documentation'),
+    fs = require("fs"),
+    request = require("request");
 
 /***** Build  *****/
 
@@ -42,53 +45,68 @@ gulp.task('compress-copy', ['cleanDist', 'license-embed', 'minify-js', 'copy-fil
 
 /***** Docs generation  *****/
 
-gulp.task('docs', ['compress-copy'], function() {
-	return gulp.src(['src/tradable-embed.js'], {base: '.'})
-    .pipe(gulpDoxx({
-      title: 'tradable-embed-core ' + versionNumber,
-    urlPrefix: ''
-    }))
-    .pipe(gulp.dest('docs'));
+gulp.task('documentation', ['compress-copy'], function () {
+  return gulp.src('src/tradable-embed.js')
+    .pipe(documentation({ format: 'html' }))
+    .pipe(gulp.dest('docs/html-documentation'));
 });
 
-gulp.task('replaceDocsCss', ['docs'], function(){
-	  return gulp.src(['docs/**'])
-		.pipe(replace('</style>', '.language-javascript {display: none;} .bs-docs-sidenav > li > a {font-size: 12px;}</style>'))
-		.pipe(replace('</style>', '.bs-docs-sidenav > li > a > span {width: 100%;display: inline-block;text-overflow: ellipsis;overflow: hidden;vertical-align: middle;}</style>'))
-		.pipe(replace('</style>', '.alert-success {vertical-align: middle;} .smthingForAccount {display: none !important;} .bs-docs-sidenav > li > a {padding: 0px 15px !important;} .bs-docs-sidenav {margin: 15px 0 0 !important;}</style>'))
-		.pipe(replace('</style>', '#overview {background: #2B3641; }</style>'))
-		.pipe(replace('</style>', '.bs-docs-sidenav > li > a{border: 0; border-bottom: 1px solid #e5e5e5} li {line-height: 17px;}.bs-docs-sidenav i {width: 3px; height:3px}</style>'))
-		.pipe(replace('break-word', 'normal; white-space: nowrap;'))
-		.pipe(replace('table-striped', 'table-striped table-condensed'))
-        .pipe(replace('src/', ''))
-		.pipe(replace(new RegExp(/(#)\w+(ForAccount")/g), '#smthingForAccount" class="smthingForAccount"'))
-		.pipe(replace('jsFiddle', 'Example'))
-		.pipe(replace('http:', ''))
-		.pipe(gulp.dest('docs'));
+var apiJsonArray;
+gulp.task('loadJSONTemplates', ['documentation'], function() {
+    var url = 'https://docs.tradable.com/json';
+    return request({
+        url: url,
+        json: true
+    }, function (error, response, body) {
+        if (!error && response.statusCode === 200) {
+            apiJsonArray = body.objects[""];
+            console.log("Objects template loaded..");
+        } else {
+            throw new gutil.PluginError({
+              plugin: 'Error trying to load object template from endpoint',
+              message: "Can't reach " +  url
+            });
+        }
+    });
 });
 
-gulp.task('copy-docs', ['replaceDocsCss'], function() {
-  return gulp.src(['docs/src/**'])
-    .pipe(gulp.dest('docs'));
+function getJSONTemplateForObject(objName) {
+    for(i = 0 ; i < apiJsonArray.length ; i++) {
+        if(apiJsonArray[i].name === objName) {
+            return apiJsonArray[i].jsondocTemplate; // Print the json response
+        }
+    }
+    throw new gutil.PluginError({
+      plugin: 'Error trying to load object template',
+      message: "CAUTION!!!! '" + objName + "' not in JSON template!"
+    });
+    return null;
+}
+
+gulp.task('buildDocs', ['loadJSONTemplates'], function(){
+   var introContent = fs.readFileSync("docs/template/intro-embed.html", "utf8");
+   return gulp.src(['docs/html-documentation/**'])
+     .pipe(replace("<div class='px2'>", introContent + "<div class='px2'>"))
+     .pipe(replace("trEmbDevVersionX", versionNumber))
+     .pipe(replace("<h3 class='mb0 no-anchor'></h3>", "<h3 class='mb0 no-anchor'>tradable-embed-core</h3>")) // set title
+     .pipe(replace("<div class='mb1'><code></code></div>", "<div class='mb1'><code>" + versionNumber + "</code></div>")) // set version
+     .pipe(replace('[exampleiframe-begin]', '<iframe width="100%" height="300" allowfullscreen="allowfullscreen" frameborder="0" src="')) // prepare example iframes
+     .pipe(replace('[exampleiframe-end]', '"></iframe>')) // prepare example iframes
+     .pipe(replace(new RegExp(/(_object-begin_)(\w+)(_object-end_)/g), replacer))
+     .pipe(gulp.dest('docs/html-documentation'));
 });
 
-gulp.task('replace-version', ['copy-docs'], function(){
+function replacer(match, p1, p2, p3, offset, string) {
+  return JSON.stringify(getJSONTemplateForObject(p2));
+}
+
+gulp.task('replace-version', ['documentation'], function(){//copy-docs
   return gulp.src(['dist/**'])
     .pipe(replace('trEmbDevVersionX', versionNumber))
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('replace-docs-version', ['replace-version'], function(){
-  return gulp.src(['docs/**'])
-    .pipe(replace('trEmbDevVersionX', versionNumber))
-    .pipe(gulp.dest('docs'));
-});
+gulp.task('generateDocs', ['documentation', 'loadJSONTemplates', 'buildDocs']);
 
-gulp.task('clean-docs', ['replace-docs-version'], function () {
-    return gulp.src('docs/src', {read: false}).pipe(clean());
-});
-
-gulp.task('generateDocs', ['docs', 'replaceDocsCss', 'copy-docs', 'clean-docs']);
-
-gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs', 'replace-docs-version']);
+gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs']);
 
