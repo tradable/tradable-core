@@ -80,6 +80,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var processingUpdate = false;
 
     //Actual library obj
+    /**
+    * @property {Boolean} tradingEnabled Indicates if the user is authenticated
+    * @property {Object} selectedAccount The current user's active trading account. When "onEmbedReady" is called and "tradingEnabled" is true, it is already available and the instruments are initialized for it.
+    * @property {Array<Object>} accounts List of accounts for the user, it is automatically initialized when trading is enabled.
+    * @property {Object} lastSnapshot Last received account snapshot (may be null).
+    * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
+    */
     var tradableEmbed = {
         version : 'trEmbDevVersionX',
         app_id: appId,
@@ -92,9 +99,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         authEndpoint : authEndpoint,
         accessToken : token,
         notifiedCallbacks : false,
-        /**
-         * Boolean that indicates if the user is authenticated
-         */
         tradingEnabled : tradingEnabled,
         expirationTimeUTC : expirationTimeUTC,
         readyCallbacks : [],
@@ -102,21 +106,27 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         accounts : [],
         accountIdsToExclude : [],
         accountMap: {},
-        /**
-         * The current user's active trading account. When "onEmbedReady" is called and "tradingEnabled" is true, it is already set and the instruments are initialized for it. 
-         */
         selectedAccount : null,
         selectedAccountId : null,
         availableCategories : [],
-        /**
-         * List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
-         */
         availableInstruments : [],
         availableSymbols : [],
         availableCurrencies : [],
         lastSnapshot: null,
         instrumentKeysForAccountUpdates: [],
         accountUpdateMillis: 700,
+        /**
+         * Redirect to the Tradable account approval page
+         */
+        showApprovalPage: function () {
+            tradableEmbed.openOAuthPage("APPROVAL", true);
+        },
+        /**
+         * Open the Tradable account approval page in a popup window
+         */
+        showApprovalPageInWindow: function () {
+            tradableEmbed.openOAuthPage("APPROVAL", false);
+        },
         /**
          * Start oauth flow within the page
          * @param      {number} brokerId(optional) If the authentication flow needs to be opened for a certain broker, this is the id (v1/brokers)
@@ -147,18 +157,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         showLoginPageInWindow: function (brokerId) {
             tradableEmbed.openOAuthPage("LOGIN", false, brokerId);
-        },
-        /**
-         * Redirect to the Tradable account approval page
-         */
-        showApprovalPage: function () {
-            tradableEmbed.openOAuthPage("APPROVAL", true);
-        },
-        /**
-         * Open the Tradable account approval page in a popup window
-         */
-        showApprovalPageInWindow: function () {
-            tradableEmbed.openOAuthPage("APPROVAL", false);
         },
         /**
          * Redirect to the Tradable Broker sign up page that will allow the user to sign up with a broken
@@ -194,12 +192,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Enables trading for the account corresponding to the given access token
-         * @param      {String} access_token    The authentication token granting access to the account
-         * @param      {String} end_point   The endpoint to send API requests to
-         * @param      {String} expires_in  The expiry date (in milliseconds) of the access token.
+         * @param      {String} accessToken    The authentication token granting access to the account
+         * @param      {String} endpoint   The endpoint to send API requests to
+         * @param      {String} expiresIn  The expiry date (in milliseconds) of the access token.
          */
-        enableWithAccessToken : function(access_token, end_point, expires_in) {
-            tradableEmbed.enableTrading(access_token, end_point, expires_in, true);
+        enableWithAccessToken : function(accessToken, endpoint, expiresIn) {
+            tradableEmbed.enableTrading(accessToken, endpoint, expiresIn, true);
         },
         /**
          * Drops authentication token and notifies embed callbacks
@@ -287,8 +285,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Main library state notifier, called every time the state of tradingEnabled changes
-         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/avPzgP/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} callback Callback function to be notified
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/avPzgP/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          */
         onEmbedReady : function (callback) {
             tradableEmbed.readyCallbacks.push(callback);
@@ -302,8 +300,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Gets notified with a new account snapshot every certain time (700 millis by default)
-         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/rObOqE/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} callback Callback function to be notified
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/rObOqE/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          */
         onAccountUpdated : function(callback) {
             if(!!callback) {
@@ -484,7 +482,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Sets the account unique id that will be used for account related API calls
-         * @param      {String}   uniqueId Account uniqueId
+         * @param      {String}   accountId Account uniqueId
          * @param      {Function} resolve Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject Error callback for the API call
          */
@@ -530,7 +528,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         // Get Instrument
         /**
-         * Returns the correspondent instrument obj to the symbol if it's in the current account
+         * Returns the correspondent instrument obj to the symbol if it's in the current account. Beware! getInstrumentFromSymbol is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
          * @param      {String}   symbol Instrument symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
          * @example
@@ -550,9 +548,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
-         * Returns the correspondent instrument obj to the instrumentId if it's in the current account
+         * Returns the correspondent instrument obj to the instrumentId if it's in the current account. Beware! getInstrumentFromId is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
          * @param      {String}   instrumentId Instrument id
          * @return      {Object} Correspondent instrument obj to the id or null if not found
+         * @example
+         * _object-begin_Instrument_object-end_
          */
         getInstrumentFromId : function(instrumentId) {
             if(!instrumentId) {
@@ -568,16 +568,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 });
                 return instrument;
             } else {
-                console.warn("Instrument not found... Beware! getInstrumentFromId is a convenience synchronous method that retrieves the instruments from cache. " + 
-                    "In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in " + 
-                    "the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.");
+                console.warn("Instrument Id not found...");
             }
             return null;
         },
         /**
-         * Returns the correspondent instrument obj to the brokerageAccountSymbol if it's in the current account
-         * @param      {String}   symbol Instrument symbol
+         * Returns the correspondent instrument obj to the brokerageAccountSymbol if it's in the current account. Beware! getInstrumentFromBrokerageAccountSymbol is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
+         * @param      {String}   brokerageAccountSymbol Instrument Brokerage Account Symbol
          * @return      {Object} Correspondent instrument obj to the symbol or null if not found
+         * @example
+         * _object-begin_Instrument_object-end_
          */
         getInstrumentFromBrokerageAccountSymbol : function(brokerageAccountSymbol) {
             var instrument = null;
@@ -591,8 +591,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Returns the account object for the given account uniqueId
-         * @param      {String}   uniqueId Account uniqueId
+         * @param      {String}   accountId Account uniqueId
          * @return      {Object} Account object for the given account uniqueId or undefined if not found
+         * @example
+         * _object-begin_Account_object-end_   
          */
         getAccountById: function(accountId) {
             return tradableEmbed.accountMap[accountId];
@@ -603,6 +605,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_User_object-callback-end_
          */
         getUser : function (resolve, reject) {
             return tradableEmbed.makeOsRequest("user", "GET", "", "", null, resolve, reject);
@@ -613,6 +617,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_App_object-callback-end_
          */
         getAppInfo : function (resolve, reject) {
             return tradableEmbed.makeOsRequest("apps", "GET", "", tradableEmbed.app_id, null, resolve, reject);
@@ -623,6 +629,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Broker_list-callback-end_
          */
         getBrokers : function (resolve, reject) {
             return tradableEmbed.makeOsRequest("brokers", "GET", "", "", null, resolve, reject);
@@ -719,10 +727,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         //v1/accounts
         /**
          * Initializes the tradableEmbed.accountsMap and the tradableEmbed.accounts list
-         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/ZbZWbe/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/ZbZWbe/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
+         * @example
+         * _object-callback-begin_AccountList_object-callback-end_
          */
         getAccounts : function (resolve, reject){
             var accountsPromise = tradableEmbed.makeAccountRequest("GET", "", "", null).then(function(data){
@@ -751,13 +761,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Candles_object-callback-end_
          */
         getCandles : function (symbol, from, to, aggregation, resolve, reject) {
             return tradableEmbed.getCandlesForAccount(tradableEmbed.selectedAccountId, symbol, from, to, aggregation, resolve, reject);
         },
         /**
          * Provides candles for a specific account, the given symbol, aggregation and range (from-to)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} symbol The symbol to get candles for
          * @param      {number} from The start of the candle range. In milliseconds since epoch
          * @param      {number} to The end of the candle range. In milliseconds since epoch
@@ -765,6 +777,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Candles_object-callback-end_
          */
         getCandlesForAccount : function (accountId, symbol, from, to, aggregation, resolve, reject) {
             var candleRequest = {"symbol": symbol, "from": from, "to": to, "aggregation": aggregation};
@@ -777,17 +791,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_AccountSnapshot_object-callback-end_
          */
         getSnapshot : function (instrumentIds, resolve, reject){
             return tradableEmbed.getSnapshotForAccount(tradableEmbed.selectedAccountId, instrumentIds, resolve, reject);
         },
         /**
          * Provides the account snapshot for a specific account - a full snapshot of all orders, positions, account metrics and prices for the instrument Ids given as input
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Array} instrumentIds Array of instrument Ids for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_AccountSnapshot_object-callback-end_
          */
         getSnapshotForAccount : function (accountId, instrumentIds, resolve, reject){
             var instrumentIdsObj = {"instrumentIds": instrumentIds, "includeMarginFactors": false};
@@ -800,17 +818,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_InstrumentList_object-callback-end_
          */
         getInstrumentsFromIds : function (instrumentIds, resolve, reject){
             return tradableEmbed.getInstrumentsFromIdsForAccount(tradableEmbed.selectedAccountId, instrumentIds, resolve, reject);
         },
          /**
          * Get the instrument information for a set of instrument Ids for for a specific accountId
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Array} instrumentIds Array of instrument Ids for the wanted instruments
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_InstrumentList_object-callback-end_
          */
         getInstrumentsFromIdsForAccount : function (accountId, instrumentIds, resolve, reject){
             var deferred = new $.Deferred();
@@ -853,17 +875,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_InstrumentSearchResults_object-callback-end_
          */
         searchInstruments : function (query, resolve, reject){
             return tradableEmbed.searchInstrumentsForAccount(tradableEmbed.selectedAccountId, query, resolve, reject);
         },
         /**
          * Search for instruments with a specific String for a specific accountId.
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} query The query used in an instrument search
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_InstrumentSearchResults_object-callback-end_
          */
         searchInstrumentsForAccount : function (accountId, query, resolve, reject){
             var deferred = new $.Deferred();
@@ -903,16 +929,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_AccountMetrics_object-callback-end_
          */
         getMetrics : function (resolve, reject){
             return tradableEmbed.getMetricsForAccount(tradableEmbed.selectedAccountId, resolve, reject);
         },
          /**
          * The users balance and other account metrics for a specific accountId
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_AccountMetrics_object-callback-end_
          */
         getMetricsForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "metrics/", null, resolve, reject);
@@ -923,16 +953,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Orders_object-callback-end_
          */
         getOrders : function (resolve, reject){
             return tradableEmbed.getOrdersForAccount(tradableEmbed.selectedAccountId, resolve, reject);
         },
          /**
          * Returns a list of all the orders divided in pending, recentlyCancelled and recentlyExecuted for a specific accountId
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Orders_object-callback-end_
          */
         getOrdersForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "orders/", null, resolve, reject);
@@ -945,19 +979,26 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * tradableEmbed.placeMarketOrder(10000, "BUY", "1000212").then(function(order) {
+         *  console.log(JSON.stringify(order, null, 2));
+         * });
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeMarketOrder : function (amount, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrder(amount, 0, side, instrumentId, "MARKET", resolve, reject);
         },
          /**
          * Place a MARKET order on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeMarketOrderForAccount : function (accountId, amount, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrderForAccount(accountId, amount, 0, side, instrumentId, "MARKET", resolve, reject);
@@ -971,13 +1012,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeLimitOrder : function (amount, price, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrder(amount, price, side, instrumentId, "LIMIT", resolve, reject);
         },
          /**
          * Place a LIMIT order on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
          * @param      {number} price The trigger price for the order.
          * @param      {String} side The order side ('BUY' or 'SELL')
@@ -985,6 +1028,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeLimitOrderForAccount : function (accountId, amount, price, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrderForAccount(accountId, amount, price, side, instrumentId, "LIMIT", resolve, reject);
@@ -998,13 +1043,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeStopOrder : function (amount, price, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrder(amount, price, side, instrumentId, "STOP", resolve, reject);
         },
          /**
          * Place a STOP order on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
          * @param      {number} price The trigger price for the order.
          * @param      {String} side The order side ('BUY' or 'SELL')
@@ -1012,6 +1059,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeStopOrderForAccount : function (accountId, amount, price, side, instrumentId, resolve, reject){
             return tradableEmbed.placeOrderForAccount(accountId, amount, price, side, instrumentId, "STOP", resolve, reject);
@@ -1035,13 +1084,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeOrderWithProtections : function (amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
             return tradableEmbed.placeOrderWithProtectionsForAccount(tradableEmbed.selectedAccountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject);
         },
          /**
          * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
          * @param      {number} price The trigger price for the order
          * @param      {String} side The order side ('BUY' or 'SELL')
@@ -1052,6 +1103,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
             var order = {"amount": amount, "price": price, "side": side, "instrumentId": instrumentId, "type": type};
@@ -1067,16 +1120,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Order_list-callback-end_
          */
         getPendingOrders : function (resolve, reject){
             return tradableEmbed.getPendingOrdersForAccount(tradableEmbed.selectedAccountId, resolve, reject);
         },
          /**
          * Returns a list of all the pending orders for a specific account - This will typically be limit orders but in a market without liquidity it can also contain market orders
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Order_list-callback-end_
          */
         getPendingOrdersForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "orders/pending", null, resolve, reject);
@@ -1088,17 +1145,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         getOrderById : function (orderId, resolve, reject){
             return tradableEmbed.getOrderByIdForAccount(tradableEmbed.selectedAccountId, orderId, resolve, reject);
         },
          /**
          * Returns an order for the provided id and a specific account, without the up-to-date price
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} orderId Id of order
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
          */
         getOrderByIdForAccount : function (accountId, orderId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "orders/"+orderId, null, resolve, reject);
@@ -1116,7 +1177,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Modifies the price for the order identified with the given id on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} orderId Id of order to modify
          * @param      {String} newPrice The new trigger price
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1139,7 +1200,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Cancels the order with the given id on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} orderId Id of order to cancel
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1154,16 +1215,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Positions_object-callback-end_
          */
         getPositions : function (resolve, reject){
             return tradableEmbed.getPositionsForAccount(tradableEmbed.selectedAccountId, resolve, reject);
         },
         /**
          * Returns a list of all the positions on a specific account. Will return open and recently closed positions
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Positions_object-callback-end_
          */
         getPositionsForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "positions/", null, resolve, reject);
@@ -1179,7 +1244,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Closes all positions on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1193,16 +1258,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Position_list-callback-end_
          */
         getOpenPositions : function (resolve, reject){
             return tradableEmbed.getOpenPositionsForAccount(tradableEmbed.selectedAccountId, resolve, reject);
         },
         /**
          * Returns a list of all the open positions on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Position_list-callback-end_
          */
         getOpenPositionsForAccount : function (accountId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "positions/open", null, resolve, reject);
@@ -1214,17 +1283,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Position_object-callback-end_
          */
         getPositionById : function (positionId, resolve, reject){
             return tradableEmbed.getPositionByIdForAccount(tradableEmbed.selectedAccountId, positionId, resolve, reject);
         },
         /**
          * Returns a position for the provided id, without the up-to-date price and metrics on a specific account
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to retrieve
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Position_object-callback-end_
          */
         getPositionByIdForAccount : function (accountId, positionId, resolve, reject){
             return tradableEmbed.makeAccountRequest("GET", accountId, "positions/"+positionId, null, resolve, reject);
@@ -1242,7 +1315,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Reduces the position (on a specific account) size, by setting a new quantity
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to reduce
          * @param      {String} newAmount the new amount
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1265,7 +1338,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Closes the position (on a specific account) with the given id
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1278,8 +1351,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Adds or modifies stoploss AND takeprofit on a position (on the selectedAccount)
          * @param      {String} positionId Id of position to close
-         * @param      {number} stoploss Stop Loss price (Set to null if not wanted)
-         * @param      {number} takeprofit Take Profit price (Set to null if not wanted)
+         * @param      {number} takeProfit Take Profit price (Set to null if not wanted)
+         * @param      {number} stopLoss Stop Loss price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1289,10 +1362,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Adds or modifies stoploss AND takeprofit on a position (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
-         * @param      {number} stoploss Stop Loss price (Set to null if not wanted)
-         * @param      {number} takeprofit Take Profit price (Set to null if not wanted)
+         * @param      {number} takeProfit Take Profit price (Set to null if not wanted)
+         * @param      {number} stopLoss Stop Loss price (Set to null if not wanted)
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
@@ -1319,7 +1392,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Cancel stoploss and takeprofit protections on a position (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1342,7 +1415,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Adds or modifies the take profit order on a position. (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1365,7 +1438,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Adds or modifies the stop loss order on a position. (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {String} newPrice The new trigger price
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
@@ -1387,7 +1460,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Cancel the take profit order on a position. (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1408,7 +1481,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * Cancel the stop loss order on a position. (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {String} positionId Id of position to close
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
@@ -1434,17 +1507,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Price_list-callback-end_         
          */
         getPrices : function (instrumentIds, resolve, reject) {
             return tradableEmbed.getPricesForAccount(tradableEmbed.selectedAccountId, instrumentIds, resolve, reject);
         },
         /**
          * A list of prices for certain instrument Ids (on a specific account)
-         * @param      {String} uniqueId The unique id for the account the request goes to
+         * @param      {String} accountId The unique id for the account the request goes to
          * @param      {Array} instrumentIds Array of instrument Ids for the wanted prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _list-callback-begin_Price_list-callback-end_         
          */
         getPricesForAccount : function (accountId, instrumentIds, resolve, reject) {
             var instrumentIdsObj = {"instrumentIds": instrumentIds};
@@ -1531,8 +1608,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        getLastDailyClose : function (symbolsArray, resolve, reject) {
-            return tradableEmbed.makeCandleRequest("dailyClose", symbolsArray, resolve, reject);
+        getLastDailyClose : function (symbols, resolve, reject) {
+            return tradableEmbed.makeCandleRequest("dailyClose", symbols, resolve, reject);
         },
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
             var deferred = new $.Deferred();

@@ -6,7 +6,6 @@ var gulp = require('gulp'),
     gutil = require("gulp-util"),
     license = require('gulp-header-license'),
     replace = require('gulp-replace'),
-    gulpDoxx = require('gulp-doxx'),
     clean = require('gulp-clean'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
@@ -48,7 +47,7 @@ gulp.task('compress-copy', ['cleanDist', 'license-embed', 'minify-js', 'copy-fil
 gulp.task('documentation', ['compress-copy'], function () {
   return gulp.src('src/tradable-embed.js')
     .pipe(documentation({ format: 'html' }))
-    .pipe(gulp.dest('docs/html-documentation'));
+    .pipe(gulp.dest('docs'));
 });
 
 var apiJsonArray;
@@ -85,19 +84,29 @@ function getJSONTemplateForObject(objName) {
 
 gulp.task('buildDocs', ['loadJSONTemplates'], function(){
    var introContent = fs.readFileSync("docs/template/intro-embed.html", "utf8");
-   return gulp.src(['docs/html-documentation/**'])
+   return gulp.src(['docs/**'])
      .pipe(replace("<div class='px2'>", introContent + "<div class='px2'>"))
      .pipe(replace("trEmbDevVersionX", versionNumber))
      .pipe(replace("<h3 class='mb0 no-anchor'></h3>", "<h3 class='mb0 no-anchor'>tradable-embed-core</h3>")) // set title
      .pipe(replace("<div class='mb1'><code></code></div>", "<div class='mb1'><code>" + versionNumber + "</code></div>")) // set version
      .pipe(replace('[exampleiframe-begin]', '<iframe width="100%" height="300" allowfullscreen="allowfullscreen" frameborder="0" src="')) // prepare example iframes
      .pipe(replace('[exampleiframe-end]', '"></iframe>')) // prepare example iframes
-     .pipe(replace(new RegExp(/(_object-begin_)(\w+)(_object-end_)/g), replacer))
-     .pipe(gulp.dest('docs/html-documentation'));
+     .pipe(replace(new RegExp(/(_object-begin_)(\w+)(_object-end_)/g), replacerSync)) // replace the example objects
+     .pipe(replace(new RegExp(/(_object-callback-begin_)(\w+)(_object-callback-end_)/g), replacerAsync)) // replace the example objects
+     .pipe(replace(new RegExp(/(_list-callback-begin_)(\w+)(_list-callback-end_)/g), replacerListAsync)) // replace the example objects
+     .pipe(gulp.dest('docs'));
 });
 
-function replacer(match, p1, p2, p3, offset, string) {
-  return JSON.stringify(getJSONTemplateForObject(p2));
+function replacerSync(match, p1, p2, p3, offset, string) {
+  return "<p class='example-intro'>This is an example object returned by this method:</p>" + JSON.stringify(getJSONTemplateForObject(p2), null, 2);
+}
+
+function replacerAsync(match, p1, p2, p3, offset, string) {
+  return "<p class='example-intro'>This is an example object returned by the callback from this method:</p>" + JSON.stringify(getJSONTemplateForObject(p2), null, 2);
+}
+
+function replacerListAsync(match, p1, p2, p3, offset, string) {
+  return "<p class='example-intro'>This is an example object returned by the callback from this method:</p>[" + JSON.stringify(getJSONTemplateForObject(p2), null, 2) + "]";
 }
 
 gulp.task('replace-version', ['documentation'], function(){//copy-docs
