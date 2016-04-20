@@ -340,6 +340,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {String} instrumentId Instrument Id for the prices
          * @example
          * tradableEmbed.addInstrumentIdToUpdates("yourCustomId", "401155666");
+         * // Now the snapshot retrieved by the "accountUpdated" event
+         * // will include prices for the specified instrument 
          */
         addInstrumentIdToUpdates: function(updateClientId, instrumentId) {
             if(updateClientId.indexOf(":") !== -1) {
@@ -886,7 +888,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
-         * _object-callback-begin_InstrumentSearchResults_object-callback-end_
+         * _list-callback-begin_InstrumentSearchResult_list-callback-end_
          */
         searchInstruments : function (query, resolve, reject){
             return tradableEmbed.searchInstrumentsForAccount(tradableEmbed.selectedAccountId, query, resolve, reject);
@@ -899,7 +901,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
-         * _object-callback-begin_InstrumentSearchResults_object-callback-end_
+         * _list-callback-begin_InstrumentSearchResult_list-callback-end_
          */
         searchInstrumentsForAccount : function (accountId, query, resolve, reject){
             var deferred = new $.Deferred();
@@ -1809,6 +1811,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function isFullInstrumentListAvailable() {
         return (tradableEmbed.selectedAccount.instrumentRetrieval === "FULL_INSTRUMENT_LIST");
     }
+    var idsToRequest = [];
     function getDefaultInstruments() {
         var deferred = new $.Deferred();
 
@@ -1818,12 +1821,28 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.resolve(tradableEmbed.availableInstruments);
             });
         } else {
-            tradableEmbed.getPrices(["401155666", "401155665", "401155667", "401155668", "401155669", "401156672", "401155663", "401155670", "401156327", "401155662"]).then(function() {
-                deferred.resolve(tradableEmbed.availableInstruments);
+            var deferreds = [];
+            idsToRequest = [];
+
+            deferreds.push(tradableEmbed.searchInstruments("EUR").then(gatherForexInstrumentIds));
+            deferreds.push(tradableEmbed.searchInstruments("AUD").then(gatherForexInstrumentIds));
+            deferreds.push(tradableEmbed.searchInstruments("USD").then(gatherForexInstrumentIds));
+
+            $.when.apply(null, deferreds).done(function () {
+                tradableEmbed.getPrices(idsToRequest).then(function() {
+                    deferred.resolve(tradableEmbed.availableInstruments);
+                });
             });
         }
 
         return deferred;
+    }
+    function gatherForexInstrumentIds(instrumentResults) {
+        $(instrumentResults).each(function(idx, instrumentResult) {
+            if(instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) {
+                idsToRequest.push(instrumentResult.instrumentId);
+            }
+        });
     }
 
     var cachedInstrumentIds = {};
