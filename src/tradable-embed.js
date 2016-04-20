@@ -221,6 +221,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {String} namespace    A unique name that will identify your listener and that you will have to use to turn the listener off 
          * @param      {String} eventName   The available events are "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"
          * @param      {Function} callback  Event listener callback function
+         * @example
+         * tradableEmbed.on("yourCustomNamespace", "accountUpdated", function(snapshot) {
+         *      console.log("Notified with every snapshot..");
+         * });
          */
         on : function(namespace, eventName, callback) {
             if(!tradableEmbed.isEventValid(eventName)) {
@@ -266,6 +270,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Turn off an specific event listener with a namespace
          * @param      {String} namespace    The unique name that identifies your listener 
          * @param      {String} eventName(optional)   The event's name, if not specified all events for the given namespace will be turned off
+         * @example
+         * tradableEmbed.off("yourCustomNamespace", "accountUpdated");         
          */
         off : function(namespace, eventName) {
             if(typeof eventName === "undefined") {
@@ -332,6 +338,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Subscribe for the given instrument Id's prices on the account snaphot updates (onAccountUpdated)
          * @param      {String} updateClientId Id for the element that is requesting the prices, only when no ids are subscribed to an instrument will the instrument be removed from the updates
          * @param      {String} instrumentId Instrument Id for the prices
+         * @example
+         * tradableEmbed.addInstrumentIdToUpdates("yourCustomId", "401155666");
          */
         addInstrumentIdToUpdates: function(updateClientId, instrumentId) {
             if(updateClientId.indexOf(":") !== -1) {
@@ -347,6 +355,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Unsubscribe for the given instrument Id's prices on the account snaphot updates (onAccountUpdated)
          * @param      {String} updateClientId Id for the element that is requesting the prices, only when no ids are subscribed to an instrument will the instrument be removed from the updates
          * @param      {String} instrumentIdToRemove Instrument Id to remove from the prices
+         * @example
+         * tradableEmbed.removeInstrumentIdFromUpdates("yourCustomId", "401155666");         
          */
         removeInstrumentIdFromUpdates: function(updateClientId, instrumentIdToRemove) {
             var instrumentKey = instrumentIdToRemove + ":" + updateClientId;
@@ -980,9 +990,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
-         * tradableEmbed.placeMarketOrder(10000, "BUY", "1000212").then(function(order) {
-         *  console.log(JSON.stringify(order, null, 2));
+         * tradableEmbed.placeMarketOrder(10000, "BUY", "401155666").then(function(order) {
+         *      console.log(JSON.stringify(order, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Trade rejected: " + jqXHR.responseJSON.message);
          * });
+         *
          * _object-callback-begin_Order_object-callback-end_
          */
         placeMarketOrder : function (amount, side, instrumentId, resolve, reject){
@@ -998,6 +1011,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * var accountId = tradableEmbed.selectedAccount.uniqueId;
+         * tradableEmbed.placeMarketOrder(accountId, 10000, "BUY", "401155666").then(function(order) {
+         *      console.log(JSON.stringify(order, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Trade rejected: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _object-callback-begin_Order_object-callback-end_
          */
         placeMarketOrderForAccount : function (accountId, amount, side, instrumentId, resolve, reject){

@@ -94,6 +94,7 @@ gulp.task('buildDocs', ['loadJSONTemplates'], function(){
      .pipe(replace(new RegExp(/(_object-begin_)(\w+)(_object-end_)/g), replacerSync)) // replace the example objects
      .pipe(replace(new RegExp(/(_object-callback-begin_)(\w+)(_object-callback-end_)/g), replacerAsync)) // replace the example objects
      .pipe(replace(new RegExp(/(_list-callback-begin_)(\w+)(_list-callback-end_)/g), replacerListAsync)) // replace the example objects
+     .pipe(replace("            ", '')) // Removes unnecessary spaces introduced by the replacement
      .pipe(gulp.dest('docs'));
 });
 
