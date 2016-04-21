@@ -69,10 +69,14 @@ gulp.task('loadJSONTemplates', ['documentation'], function() {
     });
 });
 
-function getJSONTemplateForObject(objName) {
+function getJSONTemplateForObject(objName, list) {
     for(i = 0 ; i < apiJsonArray.length ; i++) {
         if(apiJsonArray[i].name === objName) {
-            return apiJsonArray[i].jsondocTemplate; // Print the json response
+            var jsonObj = apiJsonArray[i].jsondocTemplate;
+            if(typeof list !== "undefined" && list) {
+              return [jsonObj];
+            }
+            return jsonObj; // Print the json response
         }
     }
     throw new gutil.PluginError({
@@ -109,7 +113,7 @@ function replacerAsync(match, p1, p2, p3, offset, string) {
 }
 
 function replacerListAsync(match, p1, p2, p3, offset, string) {
-  return "<p class='example-intro'>This is an example object returned by the callback from this method:</p>[" + JSON.stringify(getJSONTemplateForObject(p2), null, 2) + "]";
+  return "<p class='example-intro'>This is an example object returned by the callback from this method:</p>" + JSON.stringify(getJSONTemplateForObject(p2, true), null, 2);
 }
 
 gulp.task('replace-version', ['documentation'], function(){//copy-docs

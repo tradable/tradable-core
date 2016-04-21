@@ -857,6 +857,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * tradableEmbed.getInstrumentsFromIds(["xyz456"]).then(function(instruments) {
+         *      console.log(JSON.stringify(instruments, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Error trying to retrieve instruments: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _object-callback-begin_InstrumentList_object-callback-end_
          */
         getInstrumentsFromIds : function (instrumentIds, resolve, reject){
@@ -870,6 +876,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * var accountId = tradableEmbed.selectedAccount.uniqueId;
+         * tradableEmbed.getInstrumentsFromIdsForAccount(accountId, ["xyz456"]).then(function(instruments) {
+         *      console.log(JSON.stringify(instruments, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Error trying to retrieve instruments: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _object-callback-begin_InstrumentList_object-callback-end_
          */
         getInstrumentsFromIdsForAccount : function (accountId, instrumentIds, resolve, reject){
@@ -914,6 +927,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * tradableEmbed.searchInstruments("EURUS").then(function(instrumentResults) {
+         *      console.log(JSON.stringify(instrumentResults, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Error trying to find instruments: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _list-callback-begin_InstrumentSearchResult_list-callback-end_
          */
         searchInstruments : function (query, resolve, reject){
@@ -927,14 +946,39 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * var accountId = tradableEmbed.selectedAccount.uniqueId;
+         * tradableEmbed.searchInstrumentsForAccount(accountId, "EURUS").then(function(instrumentResults) {
+         *      console.log(JSON.stringify(instrumentResults, null, 2));
+         * }, function(jqXHR) {
+         *      console.error("Error trying to find instruments: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _list-callback-begin_InstrumentSearchResult_list-callback-end_
          */
         searchInstrumentsForAccount : function (accountId, query, resolve, reject){
             var deferred = new $.Deferred();
 
             if(isFullInstrumentListAvailable()) {
-                var result = matchInstruments(query);
-                deferred.resolve(result);
+                var instrumentsDeferred = new $.Deferred();
+                if(accountId !== tradableEmbed.selectedAccount.uniqueId) {
+                    getInstrumentsForAccount(accountId).then(function(instruments) {
+                        instrumentsDeferred.resolve(instruments);
+                    }, function(error) {
+                        deferred.reject(error);
+                    });
+                } else {
+                    instrumentsDeferred.resolve(tradableEmbed.availableInstruments);
+                }
+
+                instrumentsDeferred.then(function(instrumenList) {
+                    var result = matchInstruments(tradableEmbed.availableInstruments, query);
+                    $(result).each(function(idx, elem) {
+                        elem = normalizeInstrumentObject(elem);
+                    });
+                    deferred.resolve(result);
+                }, function(error) {
+                    deferred.reject(error);
+                });
             } else {
                 var queryObj = {"query": query};
                 if(query.length < 2) {
@@ -950,15 +994,29 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             return resolveDeferred(deferred, resolve, reject);
 
-            function matchInstruments(query) {
+            function matchInstruments(instruments, query) {
                 var matcher = new RegExp( $.ui.autocomplete.escapeRegex( query ), "i" );
-                var result = $.grep(tradableEmbed.availableInstruments, function(value) {
+                var result = $.grep(instruments, function(value) {
                     return matcher.test(value.symbol) 
                         || matcher.test(value.brokerageAccountSymbol)
                         || matcher.test(value.displayName) 
                         || matcher.test(value.type);
                 });
                 return result;
+            }
+            // Normalize Instrument object to match the InstrumentSearchResult
+            function normalizeInstrumentObject(elem) {
+                var instrumentResultProperties = ["instrumentId", "symbol", "brokerageAccountSymbol", "displayName", "shortDescription", "type"];
+                var propertiesToRemove = [];
+                for(var property in elem) {
+                    if($.inArray(property, instrumentResultProperties) < 0) {
+                        propertiesToRemove.push(property);
+                    }
+                }
+                $(propertiesToRemove).each(function(idx, prop) {
+                    delete elem[prop];
+                });
+                return elem;
             }
         },
         //v1/accounts/{accountId}/metrics
@@ -1018,7 +1076,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
-         * tradableEmbed.placeMarketOrder(10000, "BUY", "401155666").then(function(order) {
+         * tradableEmbed.placeMarketOrder(10000, "BUY", "abc123").then(function(order) {
          *      console.log(JSON.stringify(order, null, 2));
          * }, function(jqXHR) {
          *      console.error("Trade rejected: " + jqXHR.responseJSON.message);
@@ -1040,7 +1098,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
          * var accountId = tradableEmbed.selectedAccount.uniqueId;
-         * tradableEmbed.placeMarketOrderForAccount(accountId, 10000, "BUY", "401155666").then(function(order) {
+         * tradableEmbed.placeMarketOrderForAccount(accountId, 10000, "BUY", "abc123").then(function(order) {
          *      console.log(JSON.stringify(order, null, 2));
          * }, function(jqXHR) {
          *      console.error("Trade rejected: " + jqXHR.responseJSON.message);
