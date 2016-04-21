@@ -1,6 +1,6 @@
 {
   "name": "tradable-embed-core",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "description": "Lightweight JS wrapper of the tradable embed API that will make the integration really easy.",
   "main": "dist/tradable-embed.js",
   "scripts": {

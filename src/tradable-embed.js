@@ -587,7 +587,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Returns the correspondent instrument obj to the brokerageAccountSymbol if it's in the current account. Beware! getInstrumentFromBrokerageAccountSymbol is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
          * @param      {String}   brokerageAccountSymbol Instrument Brokerage Account Symbol
-         * @return      {Object} Correspondent instrument obj to the symbol or null if not found
+         * @return      {Object} Correspondent instrument obj to the Brokerage Account Symbol or null if not found
          * @example
          * _object-begin_Instrument_object-end_
          */
@@ -765,8 +765,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         //v1/accounts/{accountId}/candles
         /**
-         * Provides candles for the selectedAccount, given symbol, aggregation and range (from-to)
-         * @param      {String} symbol The symbol to get candles for
+         * Provides candles for the selectedAccount, given instrument Id, aggregation and range (from-to)
+         * @param      {String} instrumentId The instrument id for the candles
          * @param      {number} from The start of the candle range. In milliseconds since epoch
          * @param      {number} to The end of the candle range. In milliseconds since epoch
          * @param      {number} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
@@ -774,15 +774,27 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * // Day Candles for last week:
+         * var id = "someInsturmentId";
+         * var fromDate = new Date();
+         * fromDate.setDate(fromDate.getDate() - 7);
+         * var dayRes = 60 * 24;
+         *
+         * tradableEmbed.getCandles(id, fromDate.getTime(), Date.now(), dayRes).then(function(data){
+         *     console.log("Received candles: " + JSON.stringify(data, null, 2));
+         * }, function(jqXHR){
+         *     console.error("Error requesting candles: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _object-callback-begin_Candles_object-callback-end_
          */
-        getCandles : function (symbol, from, to, aggregation, resolve, reject) {
-            return tradableEmbed.getCandlesForAccount(tradableEmbed.selectedAccountId, symbol, from, to, aggregation, resolve, reject);
+        getCandles : function (instrumentId, from, to, aggregation, resolve, reject) {
+            return tradableEmbed.getCandlesForAccount(tradableEmbed.selectedAccountId, instrumentId, from, to, aggregation, resolve, reject);
         },
         /**
-         * Provides candles for a specific account, the given symbol, aggregation and range (from-to)
+         * Provides candles for a specific account, the given instrument Id, aggregation and range (from-to)
          * @param      {String} accountId The unique id for the account the request goes to
-         * @param      {String} symbol The symbol to get candles for
+         * @param      {String} instrumentId The instrument id for the candles
          * @param      {number} from The start of the candle range. In milliseconds since epoch
          * @param      {number} to The end of the candle range. In milliseconds since epoch
          * @param      {number} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
@@ -790,10 +802,23 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
+         * // Hourly Candles for last 2 days:
+         * var actId = tradableEmbed.selectedAccount.uniqueId;
+         * var id = "someInsturmentId";
+         * var fromDate = new Date();
+         * fromDate.setDate(fromDate.getDate() - 2);
+         * var hourRes = 60;
+         *
+         * tradableEmbed.getCandlesForAccount(actId, id, fromDate.getTime(), Date.now(), hourRes).then(function(data){
+         *     console.log("Received candles: " + JSON.stringify(data, null, 2));
+         * }, function(jqXHR){
+         *     console.error("Error requesting candles: " + jqXHR.responseJSON.message);
+         * });
+         *
          * _object-callback-begin_Candles_object-callback-end_
          */
-        getCandlesForAccount : function (accountId, symbol, from, to, aggregation, resolve, reject) {
-            var candleRequest = {"symbol": symbol, "from": from, "to": to, "aggregation": aggregation};
+        getCandlesForAccount : function (accountId, instrumentId, from, to, aggregation, resolve, reject) {
+            var candleRequest = {"instrumentId": instrumentId, "from": from, "to": to, "aggregation": aggregation};
             return tradableEmbed.makeAccountRequest("POST", accountId, "candles/", candleRequest, resolve, reject);
         },
         //v1/accounts/{accountId}
@@ -1014,7 +1039,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          * @example
          * var accountId = tradableEmbed.selectedAccount.uniqueId;
-         * tradableEmbed.placeMarketOrder(accountId, 10000, "BUY", "401155666").then(function(order) {
+         * tradableEmbed.placeMarketOrderForAccount(accountId, 10000, "BUY", "401155666").then(function(order) {
          *      console.log(JSON.stringify(order, null, 2));
          * }, function(jqXHR) {
          *      console.error("Trade rejected: " + jqXHR.responseJSON.message);
