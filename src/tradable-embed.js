@@ -888,7 +888,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var deferred = new $.Deferred();
 
             var missingIds = [];
-            if(!isFullInstrumentListAvailable()) {
+            if(!isFullInstrumentListAvailableForAccount(accountId)) {
                 $(instrumentIds).each(function(idx, instrumentId) {
                     if(!isInstrumentCached(instrumentId)) {
                         missingIds.push(instrumentId);
@@ -901,16 +901,27 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var instrumentIdsObj = {"instrumentIds": missingIds};
                 tradableEmbed.makeAccountRequest("POST", accountId, "instruments/", instrumentIdsObj).then(function(instruments) {
                     cacheInstruments(instruments.instruments);
-                    instrumentDeferred.resolve();
+                    instrumentDeferred.resolve(tradableEmbed.availableInstruments);
                 });
             } else {
-                instrumentDeferred.resolve();
+                if(accountId !== tradableEmbed.selectedAccount.uniqueId) {
+                    getInstrumentsForAccount(accountId).then(function(instruments) {
+                        instrumentDeferred.resolve(instruments);
+                    }, function(error) {
+                        deferred.reject(error);
+                    });
+                } else {
+                    instrumentDeferred.resolve(tradableEmbed.availableInstruments);
+                }
             }
 
-            instrumentDeferred.then(function() {
+            instrumentDeferred.then(function(instrumentList) {
                 var instrumentResult = [];
                 $(instrumentIds).each(function(idx, instrumentId) {
-                    instrumentResult.push(tradableEmbed.getInstrumentFromId(instrumentId));
+                    var instrument = getInstrumentFromInstrumentList(instrumentId, instrumentList);
+                    if(!!instrument) {
+                        instrumentResult.push(instrument);
+                    }
                 });
                 deferred.resolve({"instruments": instrumentResult});
             }, function(error) {
@@ -918,6 +929,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             });
 
             return resolveDeferred(deferred, resolve, reject);
+
+            function getInstrumentFromInstrumentList(instrumentId, instrumentList) {
+                var instrument = null;
+                $(instrumentList).each(function(index, ins){
+                    if(ins.instrumentId.toUpperCase() === instrumentId.toUpperCase()) {
+                        instrument = ins;
+                        return false;
+                    }
+                });
+                return instrument;
+            }
         },
         /**
          * Search for instruments with a specific String for the selectedAccount.
@@ -957,7 +979,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         searchInstrumentsForAccount : function (accountId, query, resolve, reject){
             var deferred = new $.Deferred();
 
-            if(isFullInstrumentListAvailable()) {
+            if(isFullInstrumentListAvailableForAccount(accountId)) {
                 var instrumentsDeferred = new $.Deferred();
                 if(accountId !== tradableEmbed.selectedAccount.uniqueId) {
                     getInstrumentsForAccount(accountId).then(function(instruments) {
@@ -969,8 +991,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     instrumentsDeferred.resolve(tradableEmbed.availableInstruments);
                 }
 
-                instrumentsDeferred.then(function(instrumenList) {
-                    var result = matchInstruments(tradableEmbed.availableInstruments, query);
+                instrumentsDeferred.then(function(instrumentList) {
+                    var result = matchInstruments(instrumentList, query);
                     $(result).each(function(idx, elem) {
                         elem = normalizeInstrumentObject(elem);
                     });
@@ -1004,7 +1026,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return result;
             }
             // Normalize Instrument object to match the InstrumentSearchResult
-            function normalizeInstrumentObject(elem) {
+            function normalizeInstrumentObject(originalInstrument) {
+                var elem = $.extend({}, originalInstrument)
                 var instrumentResultProperties = ["instrumentId", "symbol", "brokerageAccountSymbol", "displayName", "shortDescription", "type"];
                 var propertiesToRemove = [];
                 for(var property in elem) {
@@ -1893,6 +1916,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function isFullInstrumentListAvailable() {
         return (tradableEmbed.selectedAccount.instrumentRetrieval === "FULL_INSTRUMENT_LIST");
+    }
+    function isFullInstrumentListAvailableForAccount(accountId) {
+        var available = true;
+        $(tradableEmbed.accounts).each(function(idx, account) {
+            if(account.uniqueId === accountId && account.instrumentRetrieval !== "FULL_INSTRUMENT_LIST") {
+                available = false;
+            }
+        });
+        return available;
     }
     var idsToRequest = [];
     function getDefaultInstruments() {
