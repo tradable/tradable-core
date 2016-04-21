@@ -1654,7 +1654,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getPricesForAccount : function (accountId, instrumentIds, resolve, reject) {
             var instrumentIdsObj = {"instrumentIds": instrumentIds};
 
-            if(isFullInstrumentListAvailable()) {
+            if(isFullInstrumentListAvailableForAccount(accountId) || accountId !== tradableEmbed.selectedAccount.uniqueId) {
                 return tradableEmbed.makeAccountRequest("POST", accountId, "prices/", instrumentIdsObj, resolve, reject);
             } else {
                 var deferred = new $.Deferred();
