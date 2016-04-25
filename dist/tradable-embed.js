@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.15.1  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.15.2  ******/
 
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
@@ -18,7 +18,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.15.1";
+    var jsVersion = "js-1.15.2";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -89,7 +89,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradableEmbed = {
-        version : '1.15.1',
+        version : '1.15.2',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -1980,9 +1980,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
 
-                 if(instrument.type === "FOREX" && instrument.symbol.length === 6) {
-                     var ccy1 = instrument.symbol.toLowerCase().substring(0, 3);
-                     var ccy2 = instrument.symbol.toLowerCase().substring(3, 6);
+                 var strippedSymbol = instrument.symbol.replace("/", "");
+                 if((instrument.type === "FOREX" || instrument.type === "CFD") && strippedSymbol.length === 6) {
+                     var ccy1 = strippedSymbol.toLowerCase().substring(0, 3);
+                     var ccy2 = strippedSymbol.toLowerCase().substring(3, 6);
                      if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1 &&
                             $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
                          tradableEmbed.availableCurrencies.push(ccy1);
@@ -2000,6 +2001,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  cachedInstrumentIds[instrument.instrumentId] = true;
             }
         });
+    }
+
+    function resetUpdates() {
+        if(!!tradableEmbed.instrumentKeysForAccountUpdates.length) {
+            tradableEmbed.instrumentKeysForAccountUpdates.splice(0, tradableEmbed.instrumentKeysForAccountUpdates.length);
+        }
     }
 
     function validateToken() {
@@ -2033,6 +2040,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         } else {
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         }
+        resetUpdates();
         tradableEmbed.setSelectedAccount(accountId, function() {
             if(!tradableEmbed.tradingEnabled) {
                 tradableEmbed.tradingEnabled = true;

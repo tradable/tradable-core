@@ -1979,9 +1979,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  tradableEmbed.availableInstruments.push(instrument);
                  tradableEmbed.availableSymbols.push(instrument.symbol);
 
-                 if(instrument.type === "FOREX" && instrument.symbol.length === 6) {
-                     var ccy1 = instrument.symbol.toLowerCase().substring(0, 3);
-                     var ccy2 = instrument.symbol.toLowerCase().substring(3, 6);
+                 var strippedSymbol = instrument.symbol.replace("/", "");
+                 if((instrument.type === "FOREX" || instrument.type === "CFD") && strippedSymbol.length === 6) {
+                     var ccy1 = strippedSymbol.toLowerCase().substring(0, 3);
+                     var ccy2 = strippedSymbol.toLowerCase().substring(3, 6);
                      if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1 &&
                             $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
                          tradableEmbed.availableCurrencies.push(ccy1);
@@ -1999,6 +2000,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  cachedInstrumentIds[instrument.instrumentId] = true;
             }
         });
+    }
+
+    function resetUpdates() {
+        if(!!tradableEmbed.instrumentKeysForAccountUpdates.length) {
+            tradableEmbed.instrumentKeysForAccountUpdates.splice(0, tradableEmbed.instrumentKeysForAccountUpdates.length);
+        }
     }
 
     function validateToken() {
@@ -2032,6 +2039,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         } else {
             accountId = tradableEmbed.accounts[accIdxToSelect].uniqueId;
         }
+        resetUpdates();
         tradableEmbed.setSelectedAccount(accountId, function() {
             if(!tradableEmbed.tradingEnabled) {
                 tradableEmbed.tradingEnabled = true;
