@@ -1,5 +1,12 @@
 /******  Copyright 2016 Tradable ApS; @license MIT; v1.15.2  ******/
 
+//Check minimum jQuery version '2.1.4'
+if(typeof jQuery === "undefined") {
+    throw('tradable embed requires jQuery to run');
+} else if(!isGreaterOrEqualMinVersion(jQuery.fn.jquery, '2.1.4')) {
+    throw('tradable embed requires jQuery version 2.1.4 or above');
+}
+
 // Save jQuery in custom variable
 var trEmbJQ = jQuery.noConflict(true);
 
@@ -2231,3 +2238,33 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
 })(jsGlobalObject, trEmbJQ);
+
+// Checks if version 'a' if greater or equal version 'b'. Versions need to have format x.y.z
+function isGreaterOrEqualMinVersion(a, b) {
+    this.toNum = function(n) {
+        return parseInt(n, 10);
+    };
+
+    this.highest = function(a, b) {
+        var aa = a.split('.').map(this.toNum); //call .map to convert string to integer
+        var bb = b.split('.').map(this.toNum);
+
+        for (var i = 0; i < aa.length; i++) {
+            if (aa[i] == bb[i])
+                continue;
+
+            if (aa[i] > bb[i])
+                return a;
+            else
+                return b;
+
+            if (bb.length < i)
+                return a;
+        };
+
+        if (bb.length > aa.length)
+            return b;
+    };
+    
+    return (typeof highest(a, b) === "undefined" || highest(a, b) !== b) ? true : false;
+}

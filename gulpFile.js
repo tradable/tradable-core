@@ -9,11 +9,18 @@ var gulp = require('gulp'),
     clean = require('gulp-clean'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
-    request = require("request");
+    request = require("request"),
+    qunit = require('node-qunit-phantomjs');
+
+/***** Test *****/
+
+gulp.task('test', function() {
+    return qunit('./test/test-runner.html');
+});
 
 /***** Build  *****/
 
-gulp.task('cleanDist', function () {
+gulp.task('cleanDist', ['test'], function () {
     return gulp.src('dist', {read: false}).pipe(clean());
 });
 
@@ -40,7 +47,7 @@ gulp.task('minify-js', ['license-embed'], function() {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('compress-copy', ['cleanDist', 'license-embed', 'minify-js', 'copy-files']);
+gulp.task('compress-copy', ['test', 'cleanDist', 'license-embed', 'minify-js', 'copy-files']);
 
 /***** Docs generation  *****/
 

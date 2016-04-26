@@ -19,6 +19,7 @@
     "gulp-replace": "^0.5.4",
     "gulp-uglify": "^1.4.2",
     "gulp-util": "^3.0.7",
+    "node-qunit-phantomjs": "^1.4.0",
     "request": "^2.72.0"
   }
 }
