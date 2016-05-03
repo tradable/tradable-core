@@ -1,9 +1,9 @@
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
-    throw('tradable embed requires jQuery to run');
+    console.warn('tradableEmbed requires jQuery to run');
 } else if(!isGreaterOrEqualMinVersion(jQuery.fn.jquery, '2.1.4')) {
-    throw('tradable embed requires jQuery version 2.1.4 or above');
+    console.warn('tradableEmbed requires jQuery version 2.1.4 or above');
 }
 
 // Save jQuery in custom variable
