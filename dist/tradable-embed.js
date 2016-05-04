@@ -1,10 +1,10 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.15.2  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.15.4  ******/
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
-    throw('tradable embed requires jQuery to run');
+    console.warn('tradableEmbed requires jQuery to run');
 } else if(!isGreaterOrEqualMinVersion(jQuery.fn.jquery, '2.1.4')) {
-    throw('tradable embed requires jQuery version 2.1.4 or above');
+    console.warn('tradableEmbed requires jQuery version 2.1.4 or above');
 }
 
 // Save jQuery in custom variable
@@ -25,7 +25,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.15.2";
+    var jsVersion = "js-1.15.4";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -96,7 +96,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradableEmbed = {
-        version : '1.15.2',
+        version : '1.15.4',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -341,6 +341,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else {
                 console.error("Please specify a valid update frequency");
             }
+        },
+        addSymbolToUpdates: function(updateClientId, instrumentId) {
+            console.warn("'addSymbolToUpdates' is now deprecated, 'addInstrumentIdToUpdates' should now be used instead.");
+            tradableEmbed.addInstrumentIdToUpdates(updateClientId, instrumentId);
+        },
+        removeSymbolFromUpdates: function(updateClientId, instrumentIdToRemove) {
+            console.warn("'removeSymbolFromUpdates' is now deprecated, 'removeInstrumentIdFromUpdates' should now be used instead.");
+            tradableEmbed.removeInstrumentIdFromUpdates(updateClientId, instrumentIdToRemove);
         },
         /**
          * Subscribe for the given instrument Id's prices on the account snaphot updates (onAccountUpdated)
