@@ -341,6 +341,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 console.error("Please specify a valid update frequency");
             }
         },
+        addSymbolToUpdates: function(updateClientId, instrumentId) {
+            console.warn("'addSymbolToUpdates' is now deprecated, 'addInstrumentIdToUpdates' should now be used instead.");
+            tradableEmbed.addInstrumentIdToUpdates(updateClientId, instrumentId);
+        },
+        removeSymbolFromUpdates: function(updateClientId, instrumentIdToRemove) {
+            console.warn("'removeSymbolFromUpdates' is now deprecated, 'removeInstrumentIdFromUpdates' should now be used instead.");
+            tradableEmbed.removeInstrumentIdFromUpdates(updateClientId, instrumentIdToRemove);
+        },
         /**
          * Subscribe for the given instrument Id's prices on the account snaphot updates (onAccountUpdated)
          * @param      {String} updateClientId Id for the element that is requesting the prices, only when no ids are subscribed to an instrument will the instrument be removed from the updates
