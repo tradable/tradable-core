@@ -33,6 +33,7 @@ QUnit.test( " Search and Get Instruments ", function( assert ) {
     var done = assert.async();
     tradableEmbed.searchInstruments("EUR").then(function(instrumentResults) {
   		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + "Instrument Search Results " );
+  		assert.ok( Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
   		var insIds = [];
   		trEmbJQ(instrumentResults).each(function(idx, res) {
   			insIds.push(res.instrumentId);
@@ -41,6 +42,7 @@ QUnit.test( " Search and Get Instruments ", function( assert ) {
   		return tradableEmbed.getInstrumentsFromIds(insIds);
   	}).then(function(instruments) {
   		assert.ok( instruments.instruments.length > 0 , " Got " + instruments.instruments.length + "Instruments " );
+  		assert.ok( Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
   		done();
   	}, function(error) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );

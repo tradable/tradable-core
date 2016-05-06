@@ -1009,10 +1009,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
                 instrumentsDeferred.then(function(instrumentList) {
                     var result = matchInstruments(instrumentList, query);
+                    var normalizedInstrumentResults = [];
                     $(result).each(function(idx, elem) {
-                        elem = normalizeInstrumentObject(elem);
+                        normalizedInstrumentResults.push(normalizeInstrumentObject(elem));
                     });
-                    deferred.resolve(result);
+                    deferred.resolve(normalizedInstrumentResults);
                 }, function(error) {
                     deferred.reject(error);
                 });
