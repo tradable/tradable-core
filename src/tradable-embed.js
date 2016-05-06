@@ -919,7 +919,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     instrumentDeferred.resolve(tradableEmbed.availableInstruments);
                 });
             } else {
-                if(accountId !== tradableEmbed.selectedAccount.uniqueId) {
+                if(!tradableEmbed.selectedAccount || accountId !== tradableEmbed.selectedAccount.uniqueId) {
                     getInstrumentsForAccount(accountId).then(function(instruments) {
                         instrumentDeferred.resolve(instruments);
                     }, function(error) {
@@ -996,7 +996,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             if(isFullInstrumentListAvailableForAccount(accountId)) {
                 var instrumentsDeferred = new $.Deferred();
-                if(accountId !== tradableEmbed.selectedAccount.uniqueId) {
+                if(!tradableEmbed.selectedAccount || accountId !== tradableEmbed.selectedAccount.uniqueId) {
                     getInstrumentsForAccount(accountId).then(function(instruments) {
                         instrumentsDeferred.resolve(instruments);
                     }, function(error) {
@@ -1031,7 +1031,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return resolveDeferred(deferred, resolve, reject);
 
             function matchInstruments(instruments, query) {
-                var matcher = new RegExp( $.ui.autocomplete.escapeRegex( query ), "i" );
+                var matcher = new RegExp( escRegex( query ), "i" );
                 var result = $.grep(instruments, function(value) {
                     return matcher.test(value.symbol) 
                         || matcher.test(value.brokerageAccountSymbol)
@@ -1039,6 +1039,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         || matcher.test(value.type);
                 });
                 return result;
+            }
+            function escRegex(s) {
+                return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
             }
             // Normalize Instrument object to match the InstrumentSearchResult
             function normalizeInstrumentObject(originalInstrument) {
@@ -1754,16 +1757,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getLastDailyClose : function (symbols, resolve, reject) {
             return tradableEmbed.makeCandleRequest("dailyClose", symbols, resolve, reject);
         },
-        enableTrading : function(access_token, end_point, expires_in, set_latest_account){
-            var deferred = new $.Deferred();
-
-            console.log("Enabling Trading...");
-            tradableEmbed.tradingEnabled = false;
-            tradableEmbed.lastSnapshot = undefined;
-
+        /**
+         * This method will initialize tradable core with the minimum required in order to be able to use the API calls that do not require a selected account. Beware! If you use this method instead of 'enableWithAccessToken', there will not be a selectedAccount and the instruments will not be cached. The on/off listeners will not work either. I.e. you will only be able to use methods that require an 'accountId'
+         * @param      {String} access_token    The authentication token granting access to the account
+         * @param      {String} end_point   The endpoint to send API requests to
+         * @param      {String} expires_in  The expiry date (in milliseconds) of the access token.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers     
+         */
+        initializeWithToken : function(access_token, end_point, expires_in, resolve, reject) {
             if(!!access_token && !!end_point) {
                 tradableEmbed.accessToken = access_token;
                 tradableEmbed.authEndpoint = end_point;
+
 
                 if(isLocalStorageSupported()) {
                     localStorage.setItem("accessToken:"+appId, tradableEmbed.accessToken);
@@ -1775,9 +1782,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     }
                 }
             }
+            var deferred = tradableEmbed.getAccounts();
+            return resolveDeferred(deferred, resolve, reject);
+        },
+        enableTrading : function(access_token, end_point, expires_in, set_latest_account){
+            var deferred = new $.Deferred();
+
+            console.log("Enabling Trading...");
+            tradableEmbed.tradingEnabled = false;
+            tradableEmbed.lastSnapshot = undefined;
 
             var accountQty = tradableEmbed.accounts.length;
-            tradableEmbed.getAccounts().then(function(accounts) {
+            tradableEmbed.initializeWithToken(access_token, end_point, expires_in).then(function(accounts) {
                 return setSelectedAccountAndNotify(set_latest_account, accountQty);
             }).then(function() {
                 deferred.resolve();

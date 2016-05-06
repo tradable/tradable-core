@@ -10,12 +10,24 @@ var gulp = require('gulp'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
     request = require("request"),
-    qunit = require('node-qunit-phantomjs');
+    open = require('gulp-open');
+    //qunit = require('node-qunit-phantomjs');
+    //qunit = require('gulp-qunit');
 
 /***** Test *****/
 
-gulp.task('test', function() {
+/*gulp.task('test', function() {
     return qunit('./test/test-runner.html');
+});
+
+gulp.task('test', function() {
+    return gulp.src('./test/test-runner.html')
+        .pipe(qunit({'phantomjs-options': ["--web-security=false"]}));//'binPath': require('phantomjs2').path, 'timeout': 15, , '--ssl-protocol=any', '--ignore-ssl-errors=yes'
+});*/
+
+gulp.task('test', function(){
+  gulp.src('./test/test-runner.html')
+  .pipe(open({uri: './test/test-runner.html'}));
 });
 
 /***** Build  *****/

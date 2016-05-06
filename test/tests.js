@@ -15,3 +15,34 @@ QUnit.test( "jQuery min version check", function( assert ) {
   	assert.ok( isGreaterOrEqualMinVersion(invalidVersions[i], minJQueryVersion) === false, invalidVersions[i] + " isGreaterOrEqualMinVersion " + minJQueryVersion );
   }
 });
+
+QUnit.test( " Create Demo Account ", function( assert ) {
+    var done = assert.async();
+    tradableEmbed.createForexDemoAccount().then(function() {
+  		assert.ok( tradableEmbed.tradingEnabled === true, "Trading is enabled" );
+  		assert.ok( !!tradableEmbed.selectedAccount && tradableEmbed.selectedAccount.uniqueId !== undefined, "Account selected: " + tradableEmbed.selectedAccount.uniqueId );
+  		assert.ok( !!tradableEmbed.accessToken , "Access Token saved: " + tradableEmbed.accessToken );
+  		assert.ok( tradableEmbed.accounts.length > 0 , "Accounts cached" );
+  		done();
+  	}, function(error) {
+  		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+  	});
+});
+
+QUnit.test( " Search and Get Instruments ", function( assert ) {
+    var done = assert.async();
+    tradableEmbed.searchInstruments("EUR").then(function(instrumentResults) {
+  		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + "Instrument Search Results " );
+  		var insIds = [];
+  		trEmbJQ(instrumentResults).each(function(idx, res) {
+  			insIds.push(res.instrumentId);
+  		});
+  		assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
+  		return tradableEmbed.getInstrumentsFromIds(insIds);
+  	}).then(function(instruments) {
+  		assert.ok( instruments.instruments.length > 0 , " Got " + instruments.instruments.length + "Instruments " );
+  		done();
+  	}, function(error) {
+  		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+  	});
+});
