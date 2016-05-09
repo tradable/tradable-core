@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.15.4  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.16  ******/
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
@@ -25,7 +25,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         global.console = { log: function() {} };
     }
 
-    var jsVersion = "js-1.15.4";
+    var jsVersion = "js-1.16";
     var appId;
     var redirectUrl = location.href;
     var customOAuthUrl;
@@ -96,7 +96,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradableEmbed = {
-        version : '1.15.4',
+        version : '1.16',
         app_id: appId,
         oauth_host: oauthHost,
         auth_loc: oauthURL,
@@ -836,6 +836,92 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getCandlesForAccount : function (accountId, instrumentId, from, to, aggregation, resolve, reject) {
             var candleRequest = {"instrumentId": instrumentId, "from": from, "to": to, "aggregation": aggregation};
             return tradableEmbed.makeAccountRequest("POST", accountId, "candles/", candleRequest, resolve, reject);
+        },
+        subscribedCandleId : undefined,
+        lastReceivedCandle : undefined,
+        /**
+         * Provides candle updates (new prices) with the same frequency as the account update frequency. The provided candle list will be for the selectedAccount, given instrument Id, aggregation and range (from-to current time). It is only possible to start updates for one instrument, range and aggregation at a time.
+         * @param      {String} instrumentId The instrument id for the candles
+         * @param      {number} from The start of the candle range. In milliseconds since epoch
+         * @param      {number} aggregation The aggregation interval in minutes. Allowed values: 1,5,15,30,60,1440,21600,40320
+         * @param      {Function} callback Callback function that wiil receive the updates
+         * @example
+         * // Updates for 30 minute Candles starting 3 hours ago:
+         * var from = Date.now() - (1000 * 60 * 60 * 3);
+         *
+         * tradableEmbed.startCandleUpdates("EURUSD", from, 30, function(data) {
+         *     console.log("Received candles: " + JSON.stringify(data, null, 2));
+         * });
+         *
+         * _list-callback-begin_Candle_list-callback-end_
+         */
+        startCandleUpdates : function(instrumentId, from, aggregation, callback) {
+            tradableEmbed.stopCandleUpdates();
+
+            var aggregationInMillis = aggregation * 60 * 1000;
+            tradableEmbed.subscribedCandleId = instrumentId;
+            tradableEmbed.addInstrumentIdToUpdates("internalCandleUpdates", tradableEmbed.subscribedCandleId);
+
+            tradableEmbed.getCandles(instrumentId, from, Date.now(), aggregation).then(function(data) {
+                callback(data.candles);
+                tradableEmbed.lastReceivedCandle = data.candles[data.candles.length - 1];
+                tradableEmbed.on("internalCandleUpdates", "accountUpdated", function(snapshot) {
+                    var latestPriceObj = getPriceFromList(instrumentId, snapshot.prices);
+                    if(!!tradableEmbed.lastReceivedCandle && !!latestPriceObj && !!latestPriceObj.bid) {
+                        var candleBeforeProcessing = JSON.stringify($.extend({}, tradableEmbed.lastReceivedCandle));
+                        processCandle(latestPriceObj, aggregationInMillis);
+
+                        if(candleBeforeProcessing !== JSON.stringify(tradableEmbed.lastReceivedCandle)) {
+                            var candles = [];
+                            candles.push(tradableEmbed.lastReceivedCandle);
+                            callback(candles);
+                        }
+                    }
+                });
+            }, function(jqXHR) {
+                notifyErrorCallbacks(jqXHR.responseJSON);
+            });
+            
+            function processCandle(latestPriceObj, aggregationInMillis) {
+                var latestPrice = latestPriceObj.bid;
+                // New candle if required
+                if(Date.now() - tradableEmbed.lastReceivedCandle.timestamp >= aggregationInMillis) {
+                    tradableEmbed.lastReceivedCandle.timestamp = tradableEmbed.lastReceivedCandle.timestamp + aggregationInMillis;
+                    var lastClose = tradableEmbed.lastReceivedCandle.close;
+                    tradableEmbed.lastReceivedCandle.open = lastClose;
+                    tradableEmbed.lastReceivedCandle.high = lastClose;
+                    tradableEmbed.lastReceivedCandle.low = lastClose;
+                }
+
+                tradableEmbed.lastReceivedCandle.close = latestPrice;
+                if(latestPrice > tradableEmbed.lastReceivedCandle.high) {
+                    tradableEmbed.lastReceivedCandle.high = latestPrice;
+                }
+                if(latestPrice < tradableEmbed.lastReceivedCandle.low) {
+                    tradableEmbed.lastReceivedCandle.low = latestPrice;
+                }
+            }
+            function getPriceFromList(instrumentId, list) {
+                var price = null;
+                $(list).each(function(index, priceObj){
+                    if(priceObj.instrumentId === instrumentId) {
+                        price = priceObj;
+                        return false;
+                    }
+                });
+                return price;
+            }
+        },
+        /**
+         * Stops the candle updates if any in progress
+         */
+        stopCandleUpdates : function() {
+            if(!!tradableEmbed.subscribedCandleId) {
+                tradableEmbed.removeInstrumentIdFromUpdates("internalCandleUpdates", tradableEmbed.subscribedCandleId);
+                tradableEmbed.off("internalCandleUpdates");
+                tradableEmbed.subscribedCandleId = undefined;
+                tradableEmbed.lastReceivedCandle = undefined;
+            }
         },
         //v1/accounts/{accountId}
         /**

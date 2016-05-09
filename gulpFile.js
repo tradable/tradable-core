@@ -1,4 +1,4 @@
-var versionNumber = '1.15.4';
+var versionNumber = '1.16';
 
 var gulp = require('gulp'),
     rename = require('gulp-rename'),
@@ -108,7 +108,7 @@ function getJSONTemplateForObject(objName, list) {
 gulp.task('buildDocs', ['loadJSONTemplates'], function(){
    var customStyle = fs.readFileSync("docs/template/style-embed.html", "utf8");
    var introContent = fs.readFileSync("docs/template/intro-embed.html", "utf8");
-   return gulp.src(['docs/**'])
+   return gulp.src(['docs/index.html'])
      .pipe(replace("<div class='px2'>", customStyle + "<div class='px2'>")) // Insert custom style inline-css for the documentation
      .pipe(replace("<div class='px2'>", introContent + "<div class='px2'>")) // Insert HTML intro before the rest of the documentation
      .pipe(replace("trEmbDevVersionX", versionNumber))

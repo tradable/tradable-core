@@ -16,9 +16,9 @@ QUnit.test( "jQuery min version check", function( assert ) {
   }
 });
 
-QUnit.test( " Create Demo Account ", function( assert ) {
+QUnit.test( "Create Demo Account", function( assert ) {
     var done = assert.async();
-    tradableEmbed.createForexDemoAccount().then(function() {
+    createDemoAccountWithIdentification("FOREX").then(function() {
   		assert.ok( tradableEmbed.tradingEnabled === true, "Trading is enabled" );
   		assert.ok( !!tradableEmbed.selectedAccount && tradableEmbed.selectedAccount.uniqueId !== undefined, "Account selected: " + tradableEmbed.selectedAccount.uniqueId );
   		assert.ok( !!tradableEmbed.accessToken , "Access Token saved: " + tradableEmbed.accessToken );
@@ -29,7 +29,7 @@ QUnit.test( " Create Demo Account ", function( assert ) {
   	});
 });
 
-QUnit.test( " Search and Get Instruments ", function( assert ) {
+QUnit.test( "Search and Get Instruments", function( assert ) {
     var done = assert.async();
     tradableEmbed.searchInstruments("EUR").then(function(instrumentResults) {
   		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + "Instrument Search Results " );
@@ -48,3 +48,62 @@ QUnit.test( " Search and Get Instruments ", function( assert ) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
   	});
 });
+
+QUnit.test( "Start and stop candle updates", function( assert ) {
+    var done = assert.async();
+    var from = Date.now() - (1000 * 60 * 60 * 3); //3h
+    var callbacks = 0;
+    var candle;
+    tradableEmbed.startCandleUpdates("EURUSD", from, 30, function(data) {
+      if(callbacks > 0) {
+        if(!!candle) {
+          assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
+          tradableEmbed.stopCandleUpdates();
+          done();
+        } else {
+          assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
+          candle = trEmbJQ.extend({}, data[0]);
+          assert.ok(candle.high >= candle.close, "Candle high higher or equal");
+          assert.ok(candle.low <= candle.close, "Candle low lower or equal");
+        }
+      } else {
+        assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
+      }
+      callbacks++;
+    });
+});
+
+function createDemoAccountWithIdentification(type) {
+    var deferred = new trEmbJQ.Deferred();
+
+    getAnonymousId().then(function(data) {
+        var anonId = data.id;
+        var demoAPIAuthenticationRequest = {"appId": tradableEmbed.app_id, "type": type, "userIdentification": anonId};
+        var apiAuthentication;
+        tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(auth) {
+            apiAuthentication = auth;
+            return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
+        }).then(function() {
+            deferred.resolve(apiAuthentication);
+        }, function(err) {
+            deferred.reject(err);
+        });
+    });
+
+    return deferred;
+}
+
+function getAnonymousId() 
+{    var ajaxPromise = trEmbJQ.ajax({
+        type: "GET",
+        crossDomain: true,
+        xhrFields: {
+      withCredentials: true
+    },
+        url: 'https://' + tradableEmbed.oauth_host + '/analyticsId?'+window.location.host,
+        contentType: "application/json; charset=utf-8",
+        dataType: 'json'
+    });
+
+    return ajaxPromise;
+}
