@@ -22,7 +22,7 @@ var gulp = require('gulp'),
 
 gulp.task('test', function() {
     return gulp.src('./test/test-runner.html')
-        .pipe(qunit({'phantomjs-options': ["--web-security=false"]}));//'binPath': require('phantomjs2').path, 'timeout': 15, , '--ssl-protocol=any', '--ignore-ssl-errors=yes'
+        .pipe(qunit({'phantomjs-options': ["--ssl-protocol=any", "--web-security=false"], 'timeout': 20}));//'binPath': require('phantomjs2').path, 'timeout': 15, , '--ssl-protocol=any', '--ignore-ssl-errors=yes'
 });*/
 
 gulp.task('test', function(){

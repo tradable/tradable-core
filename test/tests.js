@@ -16,11 +16,13 @@ QUnit.test( "jQuery min version check", function( assert ) {
   }
 });
 
-QUnit.test( "Create Demo Account", function( assert ) {
+var apiToken;
+QUnit.test( "Initialize with token", function( assert ) {
     var done = assert.async();
-    createDemoAccountWithIdentification("FOREX").then(function() {
-  		assert.ok( tradableEmbed.tradingEnabled === true, "Trading is enabled" );
-  		assert.ok( !!tradableEmbed.selectedAccount && tradableEmbed.selectedAccount.uniqueId !== undefined, "Account selected: " + tradableEmbed.selectedAccount.uniqueId );
+    getIdentificationToken("FOREX").then(function(token) {
+      apiToken = token;
+      return tradableEmbed.initializeWithToken(token.apiTokenValue, token.apiEndpoint, token.expires);
+    }).then(function() {
   		assert.ok( !!tradableEmbed.accessToken , "Access Token saved: " + tradableEmbed.accessToken );
   		assert.ok( tradableEmbed.accounts.length > 0 , "Accounts cached" );
   		done();
@@ -31,15 +33,16 @@ QUnit.test( "Create Demo Account", function( assert ) {
 
 QUnit.test( "Search and Get Instruments", function( assert ) {
     var done = assert.async();
-    tradableEmbed.searchInstruments("EUR").then(function(instrumentResults) {
-  		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + "Instrument Search Results " );
+    var accountId = tradableEmbed.accounts[0].uniqueId;
+    tradableEmbed.searchInstrumentsForAccount(accountId, "EUR").then(function(instrumentResults) {
+  		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + " Instrument Search Results " );
   		assert.ok( Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
   		var insIds = [];
   		trEmbJQ(instrumentResults).each(function(idx, res) {
   			insIds.push(res.instrumentId);
   		});
   		assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
-  		return tradableEmbed.getInstrumentsFromIds(insIds);
+  		return tradableEmbed.getInstrumentsFromIdsForAccount(accountId, insIds);
   	}).then(function(instruments) {
   		assert.ok( instruments.instruments.length > 0 , " Got " + instruments.instruments.length + "Instruments " );
   		assert.ok( Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
@@ -47,6 +50,17 @@ QUnit.test( "Search and Get Instruments", function( assert ) {
   	}, function(error) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
   	});
+});
+
+QUnit.test( "Enable trading with token", function( assert ) {
+    var done = assert.async();
+    tradableEmbed.enableWithAccessToken(apiToken.apiTokenValue, apiToken.apiEndpoint, apiToken.expires).then(function() {
+      assert.ok( tradableEmbed.tradingEnabled === true, "Trading is enabled" );
+      assert.ok( !!tradableEmbed.selectedAccount && tradableEmbed.selectedAccount.uniqueId !== undefined, "Account selected: " + tradableEmbed.selectedAccount.uniqueId );
+      done();
+    }, function(error) {
+      QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+    });
 });
 
 QUnit.test( "Start and stop candle updates", function( assert ) {
@@ -73,18 +87,32 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     });
 });
 
-function createDemoAccountWithIdentification(type) {
+QUnit.test( "Get Account Snapshot updates", function( assert ) {
+    var done = assert.async();
+
+    var instrumentId = "USDJPY";
+    tradableEmbed.addInstrumentIdToUpdates("accountSnapshoTest", instrumentId);
+    tradableEmbed.on("accountSnapshotTest", "accountUpdated", function(snapshot) {
+        tradableEmbed.off("accountSnapshotTest");
+        var priceFound = false;
+        trEmbJQ(snapshot.prices).each(function(idx, price) {
+            if(price.instrumentId === instrumentId) {
+              priceFound = true;
+            }
+        });
+        assert.ok(priceFound === true, "Instrument id prices received and account snapshot received");
+        done();
+    });
+});
+
+function getIdentificationToken(type) {
     var deferred = new trEmbJQ.Deferred();
 
     getAnonymousId().then(function(data) {
         var anonId = data.id;
         var demoAPIAuthenticationRequest = {"appId": tradableEmbed.app_id, "type": type, "userIdentification": anonId};
-        var apiAuthentication;
-        tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(auth) {
-            apiAuthentication = auth;
-            return tradableEmbed.enableTrading(auth.apiTokenValue, auth.apiEndpoint, auth.expires);
-        }).then(function() {
-            deferred.resolve(apiAuthentication);
+        tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(token) {
+            deferred.resolve(token);
         }, function(err) {
             deferred.reject(err);
         });

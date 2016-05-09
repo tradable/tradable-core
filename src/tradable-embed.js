@@ -204,7 +204,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {String} expiresIn  The expiry date (in milliseconds) of the access token.
          */
         enableWithAccessToken : function(accessToken, endpoint, expiresIn) {
-            tradableEmbed.enableTrading(accessToken, endpoint, expiresIn, true);
+            return tradableEmbed.enableTrading(accessToken, endpoint, expiresIn, true);
         },
         /**
          * Drops authentication token and notifies embed callbacks
