@@ -387,10 +387,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onAccountSwitch : function(callback) {
-            if(callback) {
-                 if($.inArray(callback, accountSwitchCallbacks) === -1) {
-                    accountSwitchCallbacks.push(callback);
-                }
+            if(callback && $.inArray(callback, accountSwitchCallbacks) === -1) {
+                accountSwitchCallbacks.push(callback);
             }
         },
         /**
@@ -398,10 +396,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onTokenExpired: function(callback) {
-            if(callback) {
-                if($.inArray(callback, tokenExpirationCallbacks) === -1) {
-                    tokenExpirationCallbacks.push(callback);
-                }
+            if(callback && $.inArray(callback, tokenExpirationCallbacks) === -1) {
+                tokenExpirationCallbacks.push(callback);
             }
         },
         /**
@@ -409,7 +405,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onError: function(callback) {
-            if($.inArray(callback, errorCallbacks) === -1) {
+            if(callback && $.inArray(callback, errorCallbacks) === -1) {
                 errorCallbacks.push(callback);
             }
         },
@@ -552,7 +548,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(!symbol) {
                 return null;
             }
-            return tradableEmbed.getInstrumentForProperty("symbol", symbol);
+            return tradableEmbed.getInstrumentForProperty(tradableEmbed.availableInstruments, "symbol", symbol);
         },
         /**
          * Returns the correspondent instrument obj to the instrumentId if it's in the current account. Beware! getInstrumentFromId is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
@@ -566,7 +562,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return null;
             }
             if(isInstrumentCached(instrumentId)) {
-                return tradableEmbed.getInstrumentForProperty("instrumentId", instrumentId);
+                return tradableEmbed.getInstrumentForProperty(tradableEmbed.availableInstruments, "instrumentId", instrumentId);
             } else {
                 console.warn("Instrument Id not found...");
             }
@@ -580,11 +576,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-begin_Instrument_object-end_
          */
         getInstrumentFromBrokerageAccountSymbol : function(brokerageAccountSymbol) {
-            return tradableEmbed.getInstrumentForProperty("brokerageAccountSymbol", brokerageAccountSymbol);
+            return tradableEmbed.getInstrumentForProperty(tradableEmbed.availableInstruments, "brokerageAccountSymbol", brokerageAccountSymbol);
         },
-        getInstrumentForProperty : function(property, value) {
+        getInstrumentForProperty : function(instrumentList, property, value) {
             var instrument = null;
-            $(tradableEmbed.availableInstruments).each(function(index, ins){
+            $(instrumentList).each(function(index, ins){
                 if(ins[property].toUpperCase() === value.toUpperCase()) {
                     instrument = ins;
                     return false;
@@ -970,7 +966,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             instrumentDeferred.then(function(instrumentList) {
                 var instrumentResult = [];
                 $(instrumentIds).each(function(idx, instrumentId) {
-                    var instrument = getInstrumentFromInstrumentList(instrumentId, instrumentList);
+                    var instrument = tradableEmbed.getInstrumentForProperty(instrumentList, "instrumentId", instrumentId);
                     if(instrument) {
                         instrumentResult.push(instrument);
                     }
@@ -981,17 +977,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             });
 
             return resolveDeferred(deferred, resolve, reject);
-
-            function getInstrumentFromInstrumentList(instrumentId, instrumentList) {
-                var instrument = null;
-                $(instrumentList).each(function(index, ins){
-                    if(ins.instrumentId.toUpperCase() === instrumentId.toUpperCase()) {
-                        instrument = ins;
-                        return false;
-                    }
-                });
-                return instrument;
-            }
         },
         getOrResolveInstrumentsForAccountId : function(accountId, instrumentDeferred, deferred) {
             if(!tradableEmbed.selectedAccount || accountId !== tradableEmbed.selectedAccount.uniqueId) {
