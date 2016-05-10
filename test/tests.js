@@ -63,6 +63,179 @@ QUnit.test( "Enable trading with token", function( assert ) {
     });
 });
 
+QUnit.test( "Get Account Snapshot updates", function( assert ) {
+    var done = assert.async();
+
+    var instrumentId = "USDJPY";
+    tradableEmbed.addInstrumentIdToUpdates("accountSnapshoTest", instrumentId);
+    tradableEmbed.on("accountSnapshotTest", "accountUpdated", function(snapshot) {
+        tradableEmbed.off("accountSnapshotTest");
+        var priceFound = findPrices(instrumentId, snapshot.prices);
+        assert.ok(priceFound === true, "Instrument id prices received and account snapshot received");
+        done();
+    });
+});
+
+QUnit.test( "Get Metrics", function( assert ) {
+     var done = assert.async();
+
+     tradableEmbed.getMetrics().then(function(metrics){
+        assert.ok(!!metrics, "Account metrics received");
+        return tradableEmbed.getMetricsForAccount(tradableEmbed.selectedAccount.uniqueId);
+     }).then(function(metrics){
+       assert.ok(!!metrics, "Account metrics For Account received");
+       done();
+     }, function(error) {
+       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+     });
+});
+
+QUnit.test( "Get Prices", function( assert ) {
+     var done = assert.async();
+
+     var instrumentIds = ["EURUSD", "USDJPY"];
+     tradableEmbed.getPrices(instrumentIds).then(function(prices){
+        assert.ok(!!prices, "Prices received");
+
+        trEmbJQ(instrumentIds).each(function(idx, insId) {
+           var priceFound = findPrices(insId, prices);
+           assert.ok(priceFound === true, "Price received for instrument Id: " + insId);
+        });
+
+        return tradableEmbed.getPricesForAccount(tradableEmbed.selectedAccount.uniqueId, instrumentIds);
+     }).then(function(prices){
+        assert.ok(!!prices, "Prices For Account received");
+
+        trEmbJQ(instrumentIds).each(function(idx, insId) {
+           var priceFound = findPrices(insId, prices);
+           assert.ok(priceFound === true, "Price For Account received for instrument Id: " + insId);
+        });
+
+        done();
+     }, function(error) {
+       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+     });
+});
+
+QUnit.test( "Place, Get and Modify order", function( assert ) {
+    var done = assert.async();
+
+    var amt = 1000;
+    var price = 1.05;
+    var newPrice = 1.04;
+    var side = "BUY";
+    var insId = "EURUSD";
+    var type = "LIMIT";
+    var id;
+    tradableEmbed.placeOrder(amt, price, side, insId, type).then(function(order){
+        assert.ok(order.side === side, "Order placed with side");
+        assert.ok(order.amount === amt, "Order placed with amount");
+        assert.ok(order.price === price, "Order placed with price");
+        assert.ok(order.type === type, "Order placed with type");
+
+        return tradableEmbed.getOrderById(order.id);
+    }).then(function(order){
+        assert.ok(order.side === side, "Order received with side");
+        assert.ok(order.amount === amt, "Order received with amount");
+        assert.ok(order.price === price, "Order received with price");
+        assert.ok(order.type === type, "Order placed with type");
+
+        id = order.id;
+        return tradableEmbed.modifyOrderPrice(id, newPrice);
+    }).then(function(){
+       return tradableEmbed.getOrderById(id);
+    }).then(function(order) {
+       assert.ok(order.price === newPrice, "Order modified with price");
+
+       return tradableEmbed.cancelOrder(id);
+    }).then(function() {
+        assert.ok(true, "Order cancelled successfully");
+        done();
+    }, function(error) {
+        QUnit.pushFailure( JSON.stringify(error) );
+    });
+});
+
+QUnit.test( "Close All, Place Market Order, Reduce Amount and Close", function( assert ) {
+    var done = assert.async();
+    var position;
+    var side = "SELL";
+    var amt = 10000;
+    tradableEmbed.closeAllPositions().then(function() {
+      assert.ok(true, "Closed All Positions");
+      return tradableEmbed.getPositions();
+    }).then(function(positionsObj) {
+      assert.ok(positionsObj.open.length === 0, "No Positions before starting test");
+      return tradableEmbed.placeMarketOrder(amt, side, "EURUSD");
+    }).then(function(order){
+      assert.ok(order.side === side, "Order received with side");
+      assert.ok(order.amount === amt, "Order received with amount");
+      assert.ok(order.type === "MARKET", "Order placed with type");
+      return tradableEmbed.getPositions();
+    }).then(function(positionsObj){
+      assert.ok(positionsObj.open.length > 0, "Order placed with type");
+      return tradableEmbed.getPositionById(positionsObj.open[0].id);
+    }).then(function(pos){
+      position = pos;
+      assert.ok(!!pos, 'Position with id: ' + pos.id + ' received');
+      assert.ok(pos.side === side, "Position with side");
+      assert.ok(pos.amount === amt, "Position with amount");
+      return tradableEmbed.reducePositionToAmount(pos.id, pos.amount/2);
+    }).then(function(){
+      return tradableEmbed.getPositionById(position.id);
+    }).then(function(position){
+      assert.ok(position.amount === (amt/2), 'Position amount reduced');
+      return tradableEmbed.closePosition(position.id);
+    }).then(function(){
+      assert.ok(true, "Position closed");
+      done();
+    }, function(error) {
+      console.log('Error trying to decrement: ' + JSON.stringify(error.responseJSON));
+    });
+});
+
+QUnit.test( "Attach TP & SL", function( assert ) {
+     var done = assert.async();
+     var pos;
+     var instrumentId = "EURUSD";
+     var side = "BUY";
+     var amt = 2000;
+     var tp;
+     var sl;
+     tradableEmbed.placeOrder(amt, 0, side, instrumentId, "MARKET").then(function(order){
+        assert.ok(!!order, 'Order with id: ' + order.id + ' received');
+        assert.ok(order.side === side, "Position with side");
+        assert.ok(order.amount === amt, "Position with amount");
+
+        return tradableEmbed.getOpenPositions();
+     }).then(function(positions){
+        pos = positions[0];
+        assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
+        return tradableEmbed.getPrices([pos.symbol]);
+     }).then(function(prices){
+        assert.ok(!!prices[0], "Prices received");
+
+        tp = prices[0].ask + 0.0025;
+        sl = prices[0].bid - 0.0025;
+
+        return tradableEmbed.addOrModifyProtections(pos.id, tp, sl);
+    }).then(function(){
+        return tradableEmbed.getPositionById(pos.id);
+    }).then(function(position){
+        assert.ok(position.takeprofit === tp, "TP placed: " + position.takeprofit);
+        assert.ok(position.stoploss === sl, "SL placed: " + position.stoploss);
+        return tradableEmbed.cancelProtections(pos.id);
+    }).then(function(){
+        assert.ok(true, "TP and SL cancelled");
+        return tradableEmbed.closePosition(pos.id);
+    }).then(function(){
+      assert.ok(true, "Position closed");
+      done();
+    }, function(error) {
+      console.log('Error trying to decrement: ' + JSON.stringify(error.responseJSON));
+    });
+});
+
 QUnit.test( "Start and stop candle updates", function( assert ) {
     var done = assert.async();
     var from = Date.now() - (1000 * 60 * 60 * 3); //3h
@@ -87,23 +260,15 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     });
 });
 
-QUnit.test( "Get Account Snapshot updates", function( assert ) {
-    var done = assert.async();
-
-    var instrumentId = "USDJPY";
-    tradableEmbed.addInstrumentIdToUpdates("accountSnapshoTest", instrumentId);
-    tradableEmbed.on("accountSnapshotTest", "accountUpdated", function(snapshot) {
-        tradableEmbed.off("accountSnapshotTest");
-        var priceFound = false;
-        trEmbJQ(snapshot.prices).each(function(idx, price) {
-            if(price.instrumentId === instrumentId) {
-              priceFound = true;
-            }
-        });
-        assert.ok(priceFound === true, "Instrument id prices received and account snapshot received");
-        done();
+function findPrices(instrumentId, prices) {
+    var priceFound = false;
+    trEmbJQ(prices).each(function(idx, price) {
+        if(price.instrumentId === instrumentId) {
+          priceFound = true;
+        }
     });
-});
+    return priceFound;
+}
 
 function getIdentificationToken(type) {
     var deferred = new trEmbJQ.Deferred();
@@ -121,8 +286,8 @@ function getIdentificationToken(type) {
     return deferred;
 }
 
-function getAnonymousId() 
-{    var ajaxPromise = trEmbJQ.ajax({
+function getAnonymousId() {    
+    var ajaxPromise = trEmbJQ.ajax({
         type: "GET",
         crossDomain: true,
         xhrFields: {

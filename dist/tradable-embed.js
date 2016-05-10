@@ -498,11 +498,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         return reject(jqXHR, message, error);
                 });
             } else {
-                if(typeof Promise !== "undefined" && Promise.toString().indexOf("[native code]") !== -1){
-                    return Promise.resolve(ajaxPromise);
-                } else {
-                    return ajaxPromise;
-                }
+                return ajaxPromise.promise();
             }
         },
         makeAccountRequest : function (type, accountId, method, postData, resolve, reject){
