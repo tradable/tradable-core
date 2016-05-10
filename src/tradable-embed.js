@@ -34,7 +34,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         appId = tradableEmbedConfig.appId;
         customOAuthUrl = tradableEmbedConfig.customOAuthURL;
         customOAuthHost = tradableEmbedConfig.customOAuthHost;
-        if(!!tradableEmbedConfig.redirectURI) {
+        if(tradableEmbedConfig.redirectURI) {
             redirectUrl = tradableEmbedConfig.redirectURI;
         }
     } else {
@@ -46,7 +46,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         customOAuthUrl = $('#'+scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
         customOAuthHost = $('#'+scriptId).attr("data-custom-oauth-host");
         var rURI = $('#'+scriptId).attr("data-redirect-uri");
-        if(!!rURI) {
+        if(rURI) {
             redirectUrl = rURI;
         }
     }
@@ -58,7 +58,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         oauthHost = "api-staging.tradable.com/";
         console.log("Starting in staging mode...");
     }
-    if(!!customOAuthHost) {
+    if(customOAuthHost) {
         oauthHost = customOAuthHost;
     }
     var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
@@ -293,7 +293,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         initEmbedReady : function(callback) {
             if(tradableEmbed.notifiedCallbacks) {
-                callback();
+                return callback();
             }
         },
         /**
@@ -317,7 +317,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/rObOqE/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          */
         onAccountUpdated : function(callback) {
-            if(!!callback) {
+            if(callback) {
                 tradableEmbed.initAccountUpdated();
                 var callbackHash = hashCode(callback.toString());
                 if($.inArray(callbackHash, accountUpdatedCallbackHashes) === -1) {
@@ -333,7 +333,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         setAccountUpdateFrequencyMillis: function(accUpdateMillis) {
             if(!!accUpdateMillis && accUpdateMillis > 0 && typeof accUpdateMillis === "number") {
                 tradableEmbed.accountUpdateMillis = accUpdateMillis;
-                if(!!tradableEmbed.accountUpdateInterval) {
+                if(tradableEmbed.accountUpdateInterval) {
                     clearInterval(tradableEmbed.accountUpdateInterval);
                     tradableEmbed.accountUpdateInterval = setInterval(processAccountUpdate, tradableEmbed.accountUpdateMillis);
                 }
@@ -378,7 +378,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         removeInstrumentIdFromUpdates: function(updateClientId, instrumentIdToRemove) {
             var instrumentKey = instrumentIdToRemove + ":" + updateClientId;
             tradableEmbed.instrumentKeysForAccountUpdates = $.grep(tradableEmbed.instrumentKeysForAccountUpdates, function(value) {
-                return value != instrumentKey;
+                return value !== instrumentKey;
             });
         },
         /**
@@ -386,7 +386,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onAccountSwitch : function(callback) {
-            if(!!callback) {
+            if(callback) {
                  if($.inArray(callback, accountSwitchCallbacks) === -1) {
                     accountSwitchCallbacks.push(callback);
                 }
@@ -397,7 +397,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onTokenExpired: function(callback) {
-            if(!!callback) {
+            if(callback) {
                 if($.inArray(callback, tokenExpirationCallbacks) === -1) {
                     tokenExpirationCallbacks.push(callback);
                 }
@@ -454,7 +454,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 endpoint = 'https://'+oauthHost;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
                 endpoint = tradableEmbed.authEndpoint;
-            } else if(!!tradableEmbed.accountMap[accountId]) {
+            } else if(tradableEmbed.accountMap[accountId]) {
                 endpoint = tradableEmbed.accountMap[accountId].endpointURL;
             } else {
                 console.info("Please specify a valid accountId or method");
@@ -474,13 +474,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 url: (!!accountId && accountId.length > 0) ? (endpoint + version + reqType + "/" + accountId + "/" + method)
                                                            : (endpoint + version + reqType + "/" + method),
                 contentType: "application/json; charset=utf-8",
-                data: (!!postData) ? JSON.stringify(postData) : undefined,
+                data: (postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
             });
 
             ajaxPromise.then(function(){},
                 function(jqXHR, message, error){
-                    if(!!jqXHR.responseJSON) {
+                    if(jqXHR.responseJSON) {
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
                             notifyTokenExpired();
                         }
@@ -510,7 +510,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} reject Error callback for the API call
          */
         setSelectedAccount : function (accountId, resolve, reject){
-            if(!!tradableEmbed.accountMap[accountId]) {
+            if(tradableEmbed.accountMap[accountId]) {
                 tradableEmbed.lastSnapshot = undefined;
                 tradableEmbed.selectedAccount = tradableEmbed.accountMap[accountId];
                 tradableEmbed.selectedAccountId = accountId;
@@ -519,7 +519,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
                     }
-                    if(!!resolve) {
+                    if(resolve) {
                         resolve();
                     }
                 },
@@ -532,7 +532,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                             tradableEmbed.signOut();
                         }
                     }
-                    if(!!reject) {
+                    if(reject) {
                         reject(err);
                     }
                 });
@@ -731,7 +731,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var deferred = new $.Deferred();
 
             var apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue };
-            if(!!appSecret) {
+            if(appSecret) {
                 // Autogenerated demo accounts don't require a secret
                 apiRefreshAuthenticationRequest = { "refreshTokenValue": refreshTokenValue, "appSecret": appSecret };
             }
@@ -869,7 +869,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         if(candleBeforeProcessing !== JSON.stringify(tradableEmbed.lastReceivedCandle)) {
                             var candles = [];
                             candles.push(tradableEmbed.lastReceivedCandle);
-                            callback(candles);
+                            return callback(candles);
                         }
                     }
                 });
@@ -911,7 +911,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * Stops the candle updates if any in progress
          */
         stopCandleUpdates : function() {
-            if(!!tradableEmbed.subscribedCandleId) {
+            if(tradableEmbed.subscribedCandleId) {
                 tradableEmbed.removeInstrumentIdFromUpdates("internalCandleUpdates", tradableEmbed.subscribedCandleId);
                 tradableEmbed.off("internalCandleUpdates");
                 tradableEmbed.subscribedCandleId = undefined;
@@ -994,7 +994,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
 
             var instrumentDeferred = new $.Deferred();
-            if(!!missingIds.length) {
+            if(missingIds.length) {
                 var instrumentIdsObj = {"instrumentIds": missingIds};
                 tradableEmbed.makeAccountRequest("POST", accountId, "instruments/", instrumentIdsObj).then(function(instruments) {
                     cacheInstruments(instruments.instruments);
@@ -1016,7 +1016,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var instrumentResult = [];
                 $(instrumentIds).each(function(idx, instrumentId) {
                     var instrument = getInstrumentFromInstrumentList(instrumentId, instrumentList);
-                    if(!!instrument) {
+                    if(instrument) {
                         instrumentResult.push(instrument);
                     }
                 });
@@ -1337,9 +1337,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
             var order = {"amount": amount, "price": price, "side": side, "instrumentId": instrumentId, "type": type};
-            if(!!tpDistance)
+            if(tpDistance)
                 order["takeProfitDistance"] = tpDistance;
-            if(!!slDistance)
+            if(slDistance)
                 order["stopLossDistance"] = slDistance
             return tradableEmbed.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
@@ -1768,7 +1768,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 });
 
                 var promise;
-                if(!!missingInstrumentIds.length) {
+                if(missingInstrumentIds.length) {
                     promise = tradableEmbed.getInstrumentsFromIdsForAccount(accountId, missingInstrumentIds).then(function() {
                         return tradableEmbed.makeAccountRequest("POST", accountId, "prices/", instrumentIdsObj);
                     });
@@ -1787,7 +1787,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         makeCandleRequest : function (method, symbolsArray, resolve, reject, postObject) {
             var symbolsObj = {symbols: symbolsArray};
-            if(!!postObject) {
+            if(postObject) {
                 symbolsObj = postObject;
             }
             var ajaxPromise = $.ajax({
@@ -1802,7 +1802,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(!!resolve || !!reject){
                 return ajaxPromise.then(function(data){
                     if(typeof resolve === "function") {
-                        if(!!data.dailyClose) {
+                        if(data.dailyClose) {
                             return resolve(data.dailyClose);
                         } else {
                             return resolve(data);
@@ -1815,7 +1815,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else {
                 var d = new $.Deferred();
                 ajaxPromise.then(function(data) {
-                    if(!!data.dailyClose) {
+                    if(data.dailyClose) {
                         return d.resolve(data.dailyClose);
                     } else {
                         return d.resolve(data);
@@ -1859,8 +1859,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     localStorage.setItem("accessToken:"+appId, tradableEmbed.accessToken);
                     localStorage.setItem("authEndpoint:"+appId, tradableEmbed.authEndpoint);
 
-                    if(!!expires_in) {
-                        tradableEmbed.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in) * 1000); //expires conversion
+                    if(expires_in) {
+                        tradableEmbed.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in, 10) * 1000); //expires conversion
                         localStorage.setItem("expirationTimeUTC:"+appId, tradableEmbed.expirationTimeUTC);
                     }
                 }
@@ -2117,7 +2117,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function resetUpdates() {
-        if(!!tradableEmbed.instrumentKeysForAccountUpdates.length) {
+        if(tradableEmbed.instrumentKeysForAccountUpdates.length) {
             tradableEmbed.instrumentKeysForAccountUpdates.splice(0, tradableEmbed.instrumentKeysForAccountUpdates.length);
         }
     }
@@ -2220,7 +2220,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             };
             $(snapshot.positions.open).each(addMissing);
             $(snapshot.orders.pending).each(addMissing);
-            if(!!missingInstrumentIds.length) {
+            if(missingInstrumentIds.length) {
                 tradableEmbed.getInstrumentsFromIds(missingInstrumentIds).then(function() {
                     deferred.resolve(snapshot);
                 });
@@ -2309,7 +2309,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function getAuthUrl(brokerId) {
         var url;
-        if(!!brokerId) {
+        if(brokerId) {
             url = tradableEmbed.auth_loc + "&broker_id=" + brokerId;
         } else {
             url = tradableEmbed.auth_loc;
@@ -2331,7 +2331,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function ie() {
-        return ((navigator.userAgent.indexOf("MSIE") != -1) || (/rv:11.0/i.test(navigator.userAgent)));
+        return ((navigator.userAgent.indexOf("MSIE") !== -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
     // Global
@@ -2356,7 +2356,7 @@ function isGreaterOrEqualMinVersion(a, b) {
         var bb = b.split('.').map(this.toNum);
 
         for (var i = 0; i < aa.length; i++) {
-            if (aa[i] == bb[i])
+            if (aa[i] === bb[i])
                 continue;
 
             if (aa[i] > bb[i])
@@ -2366,7 +2366,7 @@ function isGreaterOrEqualMinVersion(a, b) {
 
             if (bb.length < i)
                 return a;
-        };
+        }
 
         if (bb.length > aa.length)
             return b;
