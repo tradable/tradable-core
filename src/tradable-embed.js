@@ -551,14 +551,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(!symbol) {
                 return null;
             }
-            var instrument = null;
-            $(tradableEmbed.availableInstruments).each(function(index, ins){
-                if(ins.symbol.toUpperCase() === symbol.toUpperCase()) {
-                    instrument = ins;
-                    return false;
-                }
-            });
-            return instrument;
+            return tradableEmbed.getInstrumentForProperty("symbol", symbol);
         },
         /**
          * Returns the correspondent instrument obj to the instrumentId if it's in the current account. Beware! getInstrumentFromId is a convenience synchronous method that retrieves the instrument from cache. In accounts in which the FULL_INSTRUMENT_LIST is not supported, you need to subscribe the instrument id to prices, have it in the account snapshot or request it through POST 'getInstrumentsFromIds' for it to be cached.
@@ -571,15 +564,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(!instrumentId) {
                 return null;
             }
-            var instrument = null;
             if(isInstrumentCached(instrumentId)) {
-                $(tradableEmbed.availableInstruments).each(function(index, ins){
-                    if(ins.instrumentId.toUpperCase() === instrumentId.toUpperCase()) {
-                        instrument = ins;
-                        return false;
-                    }
-                });
-                return instrument;
+                return tradableEmbed.getInstrumentForProperty("instrumentId", instrumentId);
             } else {
                 console.warn("Instrument Id not found...");
             }
@@ -593,9 +579,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-begin_Instrument_object-end_
          */
         getInstrumentFromBrokerageAccountSymbol : function(brokerageAccountSymbol) {
+            return tradableEmbed.getInstrumentForProperty("brokerageAccountSymbol", brokerageAccountSymbol);
+        },
+        getInstrumentForProperty : function(property, value) {
             var instrument = null;
             $(tradableEmbed.availableInstruments).each(function(index, ins){
-                if(ins.brokerageAccountSymbol.toUpperCase() === brokerageAccountSymbol.toUpperCase()) {
+                if(ins[property].toUpperCase() === value.toUpperCase()) {
                     instrument = ins;
                     return false;
                 }
@@ -963,11 +952,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             var missingIds = [];
             if(!isFullInstrumentListAvailableForAccount(accountId)) {
-                $(instrumentIds).each(function(idx, instrumentId) {
-                    if(!isInstrumentCached(instrumentId)) {
-                        missingIds.push(instrumentId);
-                    }
-                });
+                missingIds = findMissingInstrumentIds(instrumentIds);
             }
 
             var instrumentDeferred = new $.Deferred();
@@ -1386,8 +1371,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
         modifyOrderPriceForAccount : function (accountId, orderId, newPrice, resolve, reject){
-            var orderModification = {"price": newPrice};
-            return tradableEmbed.makeAccountRequest("PUT", accountId, "orders/"+orderId, orderModification, resolve, reject);
+            return tradableEmbed.makeAccountRequest("PUT", accountId, "orders/"+orderId, {"price": newPrice}, resolve, reject);
         },
         /**
          * Cancels the order with the given id on the selectedAccount
@@ -1524,8 +1508,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
         reducePositionToAmountForAccount : function (accountId, positionId, newAmount, resolve, reject){
-            var amount = {"amount": newAmount};
-            return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId, amount, resolve, reject);
+            return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId, {"amount": newAmount}, resolve, reject);
         },
         /**
          * Closes the position (on the selectedAccount) with the given id
@@ -1732,12 +1715,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else {
                 var deferred = new $.Deferred();
 
-                var missingInstrumentIds = [];
-                $(instrumentIds).each(function(idx, instrumentId) {
-                    if(!isInstrumentCached(instrumentId)) {
-                        missingInstrumentIds.push(instrumentId);
-                    }
-                });
+                var missingInstrumentIds = findMissingInstrumentIds(instrumentIds);
 
                 var promise;
                 if(missingInstrumentIds.length) {
@@ -2058,8 +2036,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return (typeof cachedInstrumentIds[instrumentId] !== "undefined");
     }
     function cacheInstruments(instruments) {
-        var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
-
         $(instruments).each(function(index, instrument){
             if(!isInstrumentCached(instrument.instrumentId)) {
                  tradableEmbed.availableInstruments.push(instrument);
@@ -2069,14 +2045,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  if((instrument.type === "FOREX" || instrument.type === "CFD") && strippedSymbol.length === 6) {
                      var ccy1 = strippedSymbol.toLowerCase().substring(0, 3);
                      var ccy2 = strippedSymbol.toLowerCase().substring(3, 6);
-                     if ($.inArray(ccy1, tradableEmbed.availableCurrencies) === -1 &&
-                            $.inArray(ccy1, nonValidCurrencies) === -1){ // doesn't exist
-                         tradableEmbed.availableCurrencies.push(ccy1);
-                     }
-                     if ($.inArray(ccy2, tradableEmbed.availableCurrencies) === -1 &&
-                            $.inArray(ccy1, nonValidCurrencies) === -1){
-                         tradableEmbed.availableCurrencies.push(ccy2);
-                     }
+                     cacheCurrency(ccy1);
+                     cacheCurrency(ccy2);
                  }
 
                  if ($.inArray(instrument.type, tradableEmbed.availableCategories) === -1){
@@ -2086,6 +2056,24 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                  cachedInstrumentIds[instrument.instrumentId] = true;
             }
         });
+
+        function cacheCurrency(currency) {
+            var nonValidCurrencies = ["100", "200", "225", "spx", "h33", "nas", "u30", "e50", "f40", "d30", "e35", "i40", "z30", "s30", "uso", "uko"];
+            if ($.inArray(currency, tradableEmbed.availableCurrencies) === -1 &&
+                $.inArray(currency, nonValidCurrencies) === -1){
+               tradableEmbed.availableCurrencies.push(currency);
+            }
+        }
+    }
+
+    function findMissingInstrumentIds(instrumentIds) {
+        var missingIds = [];
+        $(instrumentIds).each(function(idx, instrumentId) {
+            if(!isInstrumentCached(instrumentId)) {
+                missingIds.push(instrumentId);
+            }
+        });
+        return missingIds;
     }
 
     function resetUpdates() {
@@ -2102,10 +2090,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradableEmbed.enableTrading(tradableEmbed.accessToken, tradableEmbed.authEndpoint);
             },
             function() {
-                tradableEmbed.tradingEnabled = false;
-                if(isLocalStorageSupported()) {
-                    localStorage.setItem("tradingEnabled:"+appId, tradableEmbed.tradingEnabled);
-                }
+                setTradingEnabled(false);
                 notifyReadyCallbacks();
             }
         );
@@ -2128,10 +2113,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         resetUpdates();
         tradableEmbed.setSelectedAccount(accountId, function() {
             if(!tradableEmbed.tradingEnabled) {
-                tradableEmbed.tradingEnabled = true;
-                if(isLocalStorageSupported()) {
-                    localStorage.setItem("tradingEnabled:"+appId, tradableEmbed.tradingEnabled);
-                }
+                setTradingEnabled(true);
                 notifyReadyCallbacks();
             }
             deferred.resolve();
@@ -2140,6 +2122,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         });
 
         return deferred;
+    }
+
+    function setTradingEnabled(value) {
+        tradableEmbed.tradingEnabled = value;
+        if(isLocalStorageSupported()) {
+            localStorage.setItem("tradingEnabled:"+appId, tradableEmbed.tradingEnabled);
+        }
     }
 
     // Notify events

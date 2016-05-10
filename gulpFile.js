@@ -102,7 +102,6 @@ function getJSONTemplateForObject(objName, list) {
       plugin: 'Error trying to load object template',
       message: "CAUTION!!!! '" + objName + "' not in JSON template!"
     });
-    return null;
 }
 
 gulp.task('buildDocs', ['loadJSONTemplates'], function(){
