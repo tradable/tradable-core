@@ -1,5 +1,5 @@
 # tradable-embed-core
-[![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core)
+[![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-embed-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-embed-core)
 
 Tradable lets users trade from any app by connecting multiple brokerages through one modern API. This project is a lightweight JavaScript wrapper of the Tradable API that will make the integration with it really easy.
 

@@ -17,8 +17,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
 // Immediately invoked function expression (IIFE)
 (function(global, $) {
-    // It's good practice
-    'use strict';
+    'use strict'; // It's good practice
 
     // Avoid console errors when not supported
     if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -26,44 +25,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     var jsVersion = "js-1.16";
-    var appId;
-    var redirectUrl = location.href;
-    var customOAuthUrl;
-    var customOAuthHost;
-    // Initialize config
-    if(typeof tradableEmbedConfig !== "undefined") {
-        appId = tradableEmbedConfig.appId;
-        customOAuthUrl = tradableEmbedConfig.customOAuthURL;
-        customOAuthHost = tradableEmbedConfig.customOAuthHost;
-        if(tradableEmbedConfig.redirectURI) {
-            redirectUrl = tradableEmbedConfig.redirectURI;
-        }
-    } else {
-        var scriptId = "tradable-embed";
-        if($('#' + scriptId).length === 0) { // Backwards compatibility
-            scriptId = "tradable-api";
-        }
-        appId = $('#'+scriptId).attr("data-app-id");
-        customOAuthUrl = $('#'+scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
-        customOAuthHost = $('#'+scriptId).attr("data-custom-oauth-host");
-        var rURI = $('#'+scriptId).attr("data-redirect-uri");
-        if(rURI) {
-            redirectUrl = rURI;
-        }
-    }
-    // URI encode the redirectUrl
-    redirectUrl = encodeURIComponent(redirectUrl);
+    var scriptId = ($("#tradable-embed").length === 0) ? "#tradable-api" : "#tradable-embed"; // Backwards compatibility
 
-    var oauthHost = "api.tradable.com/";
-    if(appId > 200000) { // Staging app-id
-        oauthHost = "api-staging.tradable.com/";
-        console.log("Starting in staging mode...");
-    }
-    if(customOAuthHost) {
-        oauthHost = customOAuthHost;
-    }
-    var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
-    var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
+    // Initialize config
+    var appId = (typeof tradableEmbedConfig !== "undefined") ? tradableEmbedConfig.appId : $(scriptId).attr("data-app-id"); 
+    var redirectUrl = getRedirectUrl(scriptId);
+
+    var oauthEndpoint = formOAuthEndpoint(redirectUrl, scriptId);
+    var oauthHost = oauthEndpoint.oauthHost;
+    var oauthURL = oauthEndpoint.oauthURL;
 
     var token = localStorage.getItem("accessToken:"+appId);
     var authEndpoint = localStorage.getItem("authEndpoint:"+appId);
@@ -79,15 +49,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"];
     var callbackHolder = {};
-    var accountSwitchCallbacks = [];
-    var accountUpdatedCallbacks = [];
-    var accountUpdatedCallbackHashes = [];
-    var tokenExpirationCallbacks = [];
-    var tokenWillExpireCallbacks = [];
-    var errorCallbacks = [];
+    var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
+        tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
     var processingUpdate = false;
 
-    //Actual library obj
     /**
     * @property {Boolean} tradingEnabled Indicates if the user is authenticated
     * @property {Object} selectedAccount The current user's active trading account. When "onEmbedReady" is called and "tradingEnabled" is true, it is already available and the instruments are initialized for it.
@@ -1897,6 +1862,52 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return false;
             }
         }
+    }
+
+    // Retrieves either the current URL or the specified redirect URL 
+    function getRedirectUrl(scriptId) {
+        var redirectUrl = location.href;
+
+        if(typeof tradableEmbedConfig !== "undefined") {
+            redirectUrl = (tradableEmbedConfig.redirectURI) ? tradableEmbedConfig.redirectURI : redirectUrl;
+        } else {
+            var rURI = $(scriptId).attr("data-redirect-uri");
+            redirectUrl = (rURI) ? rURI : redirectUrl;
+        }
+
+        return encodeURIComponent(redirectUrl); // URI encode the redirectUrl
+    }
+
+    // Forms the correspondent OAuth host and URI according to the config
+    function formOAuthEndpoint(redirectUrl, scriptId) {
+        var endpoint = {};
+        
+        var customOAuthUrl;
+        var customOAuthHost;
+        if(typeof tradableEmbedConfig !== "undefined") {
+            customOAuthUrl = tradableEmbedConfig.customOAuthURL;
+            customOAuthHost = tradableEmbedConfig.customOAuthHost;
+        } else {
+            customOAuthUrl = $(scriptId).attr("data-custom-oauth-url"); // Just for testing purposes
+            customOAuthHost = $(scriptId).attr("data-custom-oauth-host");
+        }
+
+        var oauthHost = "api.tradable.com/";
+        if(appId > 200000) { // Staging app-id
+            oauthHost = "api-staging.tradable.com/";
+            console.log("Starting in staging mode...");
+        }
+        if(customOAuthHost) {
+            oauthHost = customOAuthHost;
+        }
+
+        var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
+        var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
+
+        endpoint.oauthHost = oauthHost;
+        endpoint.oauthURL = oauthURL;
+
+        return endpoint;
     }
 
     function isLocalStorageSupported() {
