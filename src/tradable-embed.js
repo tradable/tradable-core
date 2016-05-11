@@ -18,7 +18,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 (function(global, $) {
     'use strict'; // It's good practice
 
-    if (typeof console === "undefined" || typeof console.log === "undefined") // Avoid console errors when not supported
+    // Avoid console errors when not supported
+    if (typeof console === "undefined" || typeof console.log === "undefined")
         global.console = { log: function() {} };
 
     var scriptId = ($("#tradable-embed").length === 0) ? "#tradable-api" : "#tradable-embed"; // Backwards compatibility
