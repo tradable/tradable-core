@@ -1,5 +1,5 @@
 # tradable-embed-core
-[![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-embed-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-embed-core)
+[![Build Status](https://travis-ci.org/tradable/tradable-embed-core.svg?branch=master)](https://travis-ci.org/tradable/tradable-embed-core) [![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-embed-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-embed-core)
 
 Tradable lets users trade from any app by connecting multiple brokerages through one modern API. This project is a lightweight JavaScript wrapper of the Tradable API that will make the integration with it really easy.
 
@@ -31,7 +31,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
         id="tradable-embed" data-app-id="{your_app_id}"></script>
 ```
 
-##### 2. Include our [npm module] (https://www.npmjs.com/package/tradable-embed-core)
+##### 2. Include our [npm module](https://www.npmjs.com/package/tradable-embed-core)
 
 ```javascript
 npm install jquery --save
