@@ -19,39 +19,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 (function(global, $) {
     'use strict'; // It's good practice
 
-    // Avoid console errors when not supported
-    if (typeof console === "undefined" || typeof console.log === "undefined") {
+    if (typeof console === "undefined" || typeof console.log === "undefined") // Avoid console errors when not supported
         global.console = { log: function() {} };
-    }
 
-    var jsVersion = "js-1.16";
     var scriptId = ($("#tradable-embed").length === 0) ? "#tradable-api" : "#tradable-embed"; // Backwards compatibility
-
-    // Initialize config
     var appId = (typeof tradableEmbedConfig !== "undefined") ? tradableEmbedConfig.appId : $(scriptId).attr("data-app-id"); 
     var redirectUrl = getRedirectUrl(scriptId);
-
     var oauthEndpoint = formOAuthEndpoint(redirectUrl, scriptId);
-    var oauthHost = oauthEndpoint.oauthHost;
-    var oauthURL = oauthEndpoint.oauthURL;
-
-    var token = localStorage.getItem("accessToken:"+appId);
-    var authEndpoint = localStorage.getItem("authEndpoint:"+appId);
-    var tradingEnabled = localStorage.getItem("tradingEnabled:"+appId);
-    var expirationTimeUTC = localStorage.getItem("expirationTimeUTC:"+appId);
-
-    if(tradingEnabled && (!authEndpoint || !token || !expirationTimeUTC)) {
-        tradingEnabled = false;
-        if(isLocalStorageSupported()) {
-            localStorage.setItem("tradingEnabled:"+appId, tradingEnabled);
-        }
-    }
+    var tokenObj = getTokenFromStorage();
 
     var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"];
     var callbackHolder = {};
     var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
         tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
-    var processingUpdate = false;
 
     /**
     * @property {Boolean} tradingEnabled Indicates if the user is authenticated
@@ -63,17 +43,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var tradableEmbed = {
         version : '1.16',
         app_id: appId,
-        oauth_host: oauthHost,
-        auth_loc: oauthURL,
-        login_loc : oauthURL + '&showLogin=true',
-        approval_page_loc : oauthURL + '&showApproval=true',
-        broker_signup_loc : 'https://' + oauthHost + 'brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
+        oauth_host: oauthEndpoint.oauthHost,
+        auth_loc: oauthEndpoint.oauthURL,
+        login_loc : oauthEndpoint.oauthURL + '&showLogin=true',
+        approval_page_loc : oauthEndpoint.oauthURL + '&showApproval=true',
+        broker_signup_loc : 'https://' + oauthEndpoint.oauthHost + 'brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
         auth_window: null,
-        authEndpoint : authEndpoint,
-        accessToken : token,
+        authEndpoint : tokenObj.authEndpoint,
+        accessToken : tokenObj.token,
+        tradingEnabled : tokenObj.tradingEnabled,
+        expirationTimeUTC : tokenObj.expirationTimeUTC,
         notifiedCallbacks : false,
-        tradingEnabled : tradingEnabled,
-        expirationTimeUTC : expirationTimeUTC,
         readyCallbacks : [],
         allAccounts : [],
         accounts : [],
@@ -412,7 +392,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var version = (reqType === "internal") ? "" : "v1/";
             var endpoint;
             if(reqType !== "user" && reqType !== "accounts") {
-                endpoint = 'https://'+oauthHost;
+                endpoint = 'https://'+tradableEmbed.oauth_host;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
                 endpoint = tradableEmbed.authEndpoint;
             } else if(tradableEmbed.accountMap[accountId]) {
@@ -426,7 +406,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     if(reqType !== "internal") {
                         request.setRequestHeader("Authorization", "Bearer " + tradableEmbed.accessToken);
                     }
-                    request.setRequestHeader("x-tr-embed-sdk", jsVersion);
+                    request.setRequestHeader("x-tr-embed-sdk", "js-"+tradableEmbed.version);
                 },
                 crossDomain: true,
                 xhrFields: {
@@ -1758,7 +1738,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradableEmbed.accessToken = access_token;
                 tradableEmbed.authEndpoint = end_point;
 
-
                 if(isLocalStorageSupported()) {
                     localStorage.setItem("accessToken:"+appId, tradableEmbed.accessToken);
                     localStorage.setItem("authEndpoint:"+appId, tradableEmbed.authEndpoint);
@@ -1908,6 +1887,25 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         endpoint.oauthURL = oauthURL;
 
         return endpoint;
+    }
+
+    // Initializes the Tradable token values from the storage 
+    function getTokenFromStorage() {
+        var tokenObj = {};
+
+        tokenObj.token = localStorage.getItem("accessToken:"+appId);
+        tokenObj.authEndpoint = localStorage.getItem("authEndpoint:"+appId);
+        tokenObj.tradingEnabled = localStorage.getItem("tradingEnabled:"+appId);
+        tokenObj.expirationTimeUTC = localStorage.getItem("expirationTimeUTC:"+appId);
+
+        if(tokenObj.tradingEnabled && (!tokenObj.authEndpoint || !tokenObj.token || !tokenObj.expirationTimeUTC)) {
+            tokenObj.tradingEnabled = false;
+            if(isLocalStorageSupported()) {
+                localStorage.setItem("tradingEnabled:"+appId, tokenObj.tradingEnabled);
+            }
+        }
+
+        return tokenObj;
     }
 
     function isLocalStorageSupported() {
@@ -2141,6 +2139,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradableEmbed.notifiedCallbacks = true;
     }
 
+    var processingUpdate = false;
     function processAccountUpdate() {
         if(tradableEmbed.tradingEnabled && !processingUpdate &&
             (accountUpdatedCallbacks.length > 0 || typeof callbackHolder["accountUpdated"] !== undefined)) {
