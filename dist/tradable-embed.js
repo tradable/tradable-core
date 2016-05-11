@@ -387,26 +387,25 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} callback Callback function to be notified
          */
         onAccountSwitch : function(callback) {
-            if(callback && $.inArray(callback, accountSwitchCallbacks) === -1) {
-                accountSwitchCallbacks.push(callback);
-            }
+            tradableEmbed.saveCallback(callback, accountSwitchCallbacks);
         },
         /**
          * Gets called back when the token expires
          * @param      {Function} callback Callback function to be notified
          */
         onTokenExpired: function(callback) {
-            if(callback && $.inArray(callback, tokenExpirationCallbacks) === -1) {
-                tokenExpirationCallbacks.push(callback);
-            }
+            tradableEmbed.saveCallback(callback, tokenExpirationCallbacks);
         },
         /**
          * Gets called when a general error occurs, for example an account initialization error due to a password change
          * @param      {Function} callback Callback function to be notified
          */
         onError: function(callback) {
-            if(callback && $.inArray(callback, errorCallbacks) === -1) {
-                errorCallbacks.push(callback);
+            tradableEmbed.saveCallback(callback, errorCallbacks);
+        },
+        saveCallback : function(callback, callbackList) {
+            if(callback && $.inArray(callback, callbackList) === -1) {
+                callbackList.push(callback);
             }
         },
         tokenWillExpireInterval : null,
@@ -821,8 +820,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradableEmbed.addInstrumentIdToUpdates("internalCandleUpdates", tradableEmbed.subscribedCandleId);
 
             tradableEmbed.getCandles(instrumentId, from, Date.now(), aggregation).then(function(data) {
-                callback(data.candles);
                 tradableEmbed.lastReceivedCandle = data.candles[data.candles.length - 1];
+                startCandleListener();
+                return callback(data.candles);
+            }, function(jqXHR) {
+                notifyErrorCallbacks(jqXHR.responseJSON);
+            });
+
+            function startCandleListener() {
                 tradableEmbed.on("internalCandleUpdates", "accountUpdated", function(snapshot) {
                     var latestPriceObj = getPriceFromList(instrumentId, snapshot.prices);
                     if(!!tradableEmbed.lastReceivedCandle && !!latestPriceObj && !!latestPriceObj.bid) {
@@ -836,10 +841,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         }
                     }
                 });
-            }, function(jqXHR) {
-                notifyErrorCallbacks(jqXHR.responseJSON);
-            });
-            
+            }
             function processCandle(latestPriceObj, aggregationInMillis) {
                 var latestPrice = latestPriceObj.bid;
                 // New candle if required
@@ -1494,7 +1496,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
         reducePositionToAmountForAccount : function (accountId, positionId, newAmount, resolve, reject){
-            return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId, {"amount": newAmount}, resolve, reject);
+            var amountObj = {"amount": newAmount};
+            return tradableEmbed.makeAccountRequest("PUT", accountId, "positions/"+positionId, amountObj, resolve, reject);
         },
         /**
          * Closes the position (on the selectedAccount) with the given id
@@ -2290,7 +2293,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         module.exports = tradableEmbed;
     }
 
-})(jsGlobalObject, trEmbJQ);
+}(jsGlobalObject, trEmbJQ));
 
 // Checks if version 'a' if greater or equal version 'b'. Versions need to have format x.y.z
 function isGreaterOrEqualMinVersion(a, b) {
