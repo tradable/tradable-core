@@ -21,7 +21,7 @@ Tradable core requires jQuery 2.1.4 and it uses it in [noConflict](https://api.j
 
 There are two ways of integrating Tradable core into your project:
 
-##### 1. Link our script directly
+##### Option 1 - Link our script directly
 
 If you don't need to bundle Tradable core in your code base, then you can simply link jQuery and our script:
 
@@ -31,7 +31,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
         id="tradable-embed" data-app-id="{your_app_id}"></script>
 ```
 
-##### 2. Include our [npm module](https://www.npmjs.com/package/tradable-embed-core)
+##### Option 2 - Include our [npm module](https://www.npmjs.com/package/tradable-embed-core)
 
 ```javascript
 npm install jquery --save
@@ -136,3 +136,7 @@ Beware! The light integration has limitations:
 - It is only possible to make API calls that **require an accountId**. 
 - on/off listeners can not be used
 - There won't be any instrument caching
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
