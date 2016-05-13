@@ -16,15 +16,75 @@ QUnit.test( "jQuery min version check", function( assert ) {
   }
 });
 
+QUnit.test( "Test tradableConfig object initialization", function( assert ) {
+  assert.ok( tradable.testhook, "Tradable test hook is available" );
+  var appId = "100010";
+  var scriptId = "#tradable";
+  var redirectURI = "redirectURI";
+  var customOAuthHost = "customOAuthHost";
+  var customOAuthURL = "customOAuthURL";
+
+  resetConfig();
+  initializeConfig(scriptId, redirectURI, customOAuthHost, customOAuthURL);
+  testConfig("Script ID " + scriptId);
+
+  resetConfig();
+  trEmbJQ(scriptId).attr("id", "tradable-embed");
+  scriptId = "#tradable-embed";
+  testConfig("Script ID " + scriptId);
+
+  resetConfig();
+  trEmbJQ("#tradable-embed").attr("id", "tradable-api");
+  scriptId = "#tradable-api";
+  testConfig("Script ID " + scriptId);
+
+  resetConfig(scriptId);
+
+  window.tradableEmbedConfig = { 'appId': appId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+  testConfig("tradableEmbedConfig object");
+
+  resetConfig(scriptId);
+
+  window.tradableConfig = { 'appId': appId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+  testConfig("tradableConfig object");
+
+
+  function initializeConfig(scriptId, redirectURI, customOAuthURL, customOAuthHost) {
+      trEmbJQ(scriptId).attr("data-redirect-uri", redirectURI);
+      trEmbJQ(scriptId).attr("data-custom-oauth-url", customOAuthHost);
+      trEmbJQ(scriptId).attr("data-custom-oauth-host", customOAuthURL);
+  }
+  function testConfig(text) {
+      var config = tradable.testhook.initializeTradableConfig();
+      assert.ok( config.appId === appId, text + ": Tradable App Id correctly initialized" );
+      assert.ok( config.customOAuthURL === customOAuthURL, text + ": customOAuthURL correctly initialized" );
+      assert.ok( config.customOAuthHost === customOAuthHost, text + ": customOAuthHost correctly initialized" );
+      assert.ok( config.redirectURI === redirectURI, text + ": redirectURI correctly initialized" );
+  }
+  function resetConfig(scriptId) {
+    window.tradableConfig = undefined;
+    window.tradableEmbedConfig = undefined;
+
+    if(scriptId) {
+      trEmbJQ(scriptId).attr("data-app-id", "");
+      trEmbJQ(scriptId).attr("data-redirect-uri", "");
+      trEmbJQ(scriptId).attr("data-custom-oauth-url", "");
+      trEmbJQ(scriptId).attr("data-custom-oauth-host", "");
+    }
+
+    assert.ok( !tradableConfig, "Tradable Config is reset" );
+  }
+});
+
 var apiToken;
 QUnit.test( "Initialize with token", function( assert ) {
     var done = assert.async();
     getIdentificationToken("FOREX").then(function(token) {
       apiToken = token;
-      return tradableEmbed.initializeWithToken(token.apiTokenValue, token.apiEndpoint, token.expires);
+      return tradable.initializeWithToken(token.apiTokenValue, token.apiEndpoint, token.expires);
     }).then(function() {
-  		assert.ok( !!tradableEmbed.accessToken , "Access Token saved: " + tradableEmbed.accessToken );
-  		assert.ok( tradableEmbed.accounts.length > 0 , "Accounts cached" );
+  		assert.ok( !!tradable.accessToken , "Access Token saved: " + tradable.accessToken );
+  		assert.ok( tradable.accounts.length > 0 , "Accounts cached" );
   		done();
   	}, function(error) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
@@ -33,8 +93,8 @@ QUnit.test( "Initialize with token", function( assert ) {
 
 QUnit.test( "Search and Get Instruments", function( assert ) {
     var done = assert.async();
-    var accountId = tradableEmbed.accounts[0].uniqueId;
-    tradableEmbed.searchInstrumentsForAccount(accountId, "EUR").then(function(instrumentResults) {
+    var accountId = tradable.accounts[0].uniqueId;
+    tradable.searchInstrumentsForAccount(accountId, "EUR").then(function(instrumentResults) {
   		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + " Instrument Search Results " );
   		assert.ok( Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
   		var insIds = [];
@@ -42,7 +102,7 @@ QUnit.test( "Search and Get Instruments", function( assert ) {
   			insIds.push(res.instrumentId);
   		});
   		assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
-  		return tradableEmbed.getInstrumentsFromIdsForAccount(accountId, insIds);
+  		return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
   	}).then(function(instruments) {
   		assert.ok( instruments.instruments.length > 0 , " Got " + instruments.instruments.length + "Instruments " );
   		assert.ok( Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
@@ -54,9 +114,9 @@ QUnit.test( "Search and Get Instruments", function( assert ) {
 
 QUnit.test( "Enable trading with token", function( assert ) {
     var done = assert.async();
-    tradableEmbed.enableWithAccessToken(apiToken.apiTokenValue, apiToken.apiEndpoint, apiToken.expires).then(function() {
-      assert.ok( tradableEmbed.tradingEnabled === true, "Trading is enabled" );
-      assert.ok( !!tradableEmbed.selectedAccount && tradableEmbed.selectedAccount.uniqueId !== undefined, "Account selected: " + tradableEmbed.selectedAccount.uniqueId );
+    tradable.enableWithAccessToken(apiToken.apiTokenValue, apiToken.apiEndpoint, apiToken.expires).then(function() {
+      assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
+      assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
       done();
     }, function(error) {
       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
@@ -67,16 +127,17 @@ QUnit.test( "Get Account Snapshot updates", function( assert ) {
     var done = assert.async();
 
     var instrumentId = "USDJPY";
-    tradableEmbed.addInstrumentIdToUpdates("accountSnapshoTest", instrumentId);
-    tradableEmbed.on("accountSnapshotTest", "accountUpdated", function(snapshot) {
-        tradableEmbed.off("accountSnapshotTest");
+    tradable.addInstrumentIdToUpdates("accountSnapshoTest", instrumentId);
+    tradable.on("accountSnapshotTest", "accountUpdated", function(snapshot) {
+        tradable.off("accountSnapshotTest");
         var priceFound = findPrices(instrumentId, snapshot.prices);
         assert.ok(priceFound === true, "Instrument id prices received and account snapshot received");
         done();
     });
 });
 
-QUnit.test( "Get Metrics", function( assert ) {
+// Using tradableEmbed for backwards compatibility testing
+QUnit.test( "Get Metrics with tradableEmbed", function( assert ) {
      var done = assert.async();
 
      tradableEmbed.getMetrics().then(function(metrics){
@@ -94,7 +155,7 @@ QUnit.test( "Get Prices", function( assert ) {
      var done = assert.async();
 
      var instrumentIds = ["EURUSD", "USDJPY"];
-     tradableEmbed.getPrices(instrumentIds).then(function(prices){
+     tradable.getPrices(instrumentIds).then(function(prices){
         assert.ok(!!prices, "Prices received");
 
         trEmbJQ(instrumentIds).each(function(idx, insId) {
@@ -102,7 +163,7 @@ QUnit.test( "Get Prices", function( assert ) {
            assert.ok(priceFound === true, "Price received for instrument Id: " + insId);
         });
 
-        return tradableEmbed.getPricesForAccount(tradableEmbed.selectedAccount.uniqueId, instrumentIds);
+        return tradable.getPricesForAccount(tradable.selectedAccount.uniqueId, instrumentIds);
      }).then(function(prices){
         assert.ok(!!prices, "Prices For Account received");
 
@@ -127,13 +188,13 @@ QUnit.test( "Place, Get and Modify order", function( assert ) {
     var insId = "EURUSD";
     var type = "LIMIT";
     var id;
-    tradableEmbed.placeOrder(amt, price, side, insId, type).then(function(order){
+    tradable.placeOrder(amt, price, side, insId, type).then(function(order){
         assert.ok(order.side === side, "Order placed with side");
         assert.ok(order.amount === amt, "Order placed with amount");
         assert.ok(order.price === price, "Order placed with price");
         assert.ok(order.type === type, "Order placed with type");
 
-        return tradableEmbed.getOrderById(order.id);
+        return tradable.getOrderById(order.id);
     }).then(function(order){
         assert.ok(order.side === side, "Order received with side");
         assert.ok(order.amount === amt, "Order received with amount");
@@ -141,13 +202,13 @@ QUnit.test( "Place, Get and Modify order", function( assert ) {
         assert.ok(order.type === type, "Order placed with type");
 
         id = order.id;
-        return tradableEmbed.modifyOrderPrice(id, newPrice);
+        return tradable.modifyOrderPrice(id, newPrice);
     }).then(function(){
-       return tradableEmbed.getOrderById(id);
+       return tradable.getOrderById(id);
     }).then(function(order) {
        assert.ok(order.price === newPrice, "Order modified with price");
 
-       return tradableEmbed.cancelOrder(id);
+       return tradable.cancelOrder(id);
     }).then(function() {
         assert.ok(true, "Order cancelled successfully");
         done();
@@ -161,31 +222,31 @@ QUnit.test( "Close All, Place Market Order, Reduce Amount and Close", function( 
     var position;
     var side = "SELL";
     var amt = 10000;
-    tradableEmbed.closeAllPositions().then(function() {
+    tradable.closeAllPositions().then(function() {
       assert.ok(true, "Closed All Positions");
-      return tradableEmbed.getPositions();
+      return tradable.getPositions();
     }).then(function(positionsObj) {
       assert.ok(positionsObj.open.length === 0, "No Positions before starting test");
-      return tradableEmbed.placeMarketOrder(amt, side, "EURUSD");
+      return tradable.placeMarketOrder(amt, side, "EURUSD");
     }).then(function(order){
       assert.ok(order.side === side, "Order received with side");
       assert.ok(order.amount === amt, "Order received with amount");
       assert.ok(order.type === "MARKET", "Order placed with type");
-      return tradableEmbed.getPositions();
+      return tradable.getPositions();
     }).then(function(positionsObj){
       assert.ok(positionsObj.open.length > 0, "Order placed with type");
-      return tradableEmbed.getPositionById(positionsObj.open[0].id);
+      return tradable.getPositionById(positionsObj.open[0].id);
     }).then(function(pos){
       position = pos;
       assert.ok(!!pos, 'Position with id: ' + pos.id + ' received');
       assert.ok(pos.side === side, "Position with side");
       assert.ok(pos.amount === amt, "Position with amount");
-      return tradableEmbed.reducePositionToAmount(pos.id, pos.amount/2);
+      return tradable.reducePositionToAmount(pos.id, pos.amount/2);
     }).then(function(){
-      return tradableEmbed.getPositionById(position.id);
+      return tradable.getPositionById(position.id);
     }).then(function(position){
       assert.ok(position.amount === (amt/2), 'Position amount reduced');
-      return tradableEmbed.closePosition(position.id);
+      return tradable.closePosition(position.id);
     }).then(function(){
       assert.ok(true, "Position closed");
       done();
@@ -202,32 +263,32 @@ QUnit.test( "Attach TP & SL", function( assert ) {
      var amt = 2000;
      var tp;
      var sl;
-     tradableEmbed.placeOrder(amt, 0, side, instrumentId, "MARKET").then(function(order){
+     tradable.placeOrder(amt, 0, side, instrumentId, "MARKET").then(function(order){
         assert.ok(!!order, 'Order with id: ' + order.id + ' received');
         assert.ok(order.side === side, "Position with side");
         assert.ok(order.amount === amt, "Position with amount");
 
-        return tradableEmbed.getOpenPositions();
+        return tradable.getOpenPositions();
      }).then(function(positions){
         pos = positions[0];
         assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
-        return tradableEmbed.getPrices([pos.symbol]);
+        return tradable.getPrices([pos.symbol]);
      }).then(function(prices){
         assert.ok(!!prices[0], "Prices received");
 
         tp = prices[0].ask + 0.0025;
         sl = prices[0].bid - 0.0025;
 
-        return tradableEmbed.addOrModifyProtections(pos.id, tp, sl);
+        return tradable.addOrModifyProtections(pos.id, tp, sl);
     }).then(function(){
-        return tradableEmbed.getPositionById(pos.id);
+        return tradable.getPositionById(pos.id);
     }).then(function(position){
         assert.ok(position.takeprofit === tp, "TP placed: " + position.takeprofit);
         assert.ok(position.stoploss === sl, "SL placed: " + position.stoploss);
-        return tradableEmbed.cancelProtections(pos.id);
+        return tradable.cancelProtections(pos.id);
     }).then(function(){
         assert.ok(true, "TP and SL cancelled");
-        return tradableEmbed.closePosition(pos.id);
+        return tradable.closePosition(pos.id);
     }).then(function(){
       assert.ok(true, "Position closed");
       done();
@@ -241,11 +302,11 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     var from = Date.now() - (1000 * 60 * 60 * 3); //3h
     var callbacks = 0;
     var candle;
-    tradableEmbed.startCandleUpdates("EURUSD", from, 30, function(data) {
+    tradable.startCandleUpdates("EURUSD", from, 30, function(data) {
       if(callbacks > 0) {
         if(!!candle) {
           assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
-          tradableEmbed.stopCandleUpdates();
+          tradable.stopCandleUpdates();
           done();
         } else {
           assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
@@ -275,8 +336,8 @@ function getIdentificationToken(type) {
 
     getAnonymousId().then(function(data) {
         var anonId = data.id;
-        var demoAPIAuthenticationRequest = {"appId": tradableEmbed.app_id, "type": type, "userIdentification": anonId};
-        tradableEmbed.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(token) {
+        var demoAPIAuthenticationRequest = {"appId": tradable.app_id, "type": type, "userIdentification": anonId};
+        tradable.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(token) {
             deferred.resolve(token);
         }, function(err) {
             deferred.reject(err);
@@ -293,7 +354,7 @@ function getAnonymousId() {
         xhrFields: {
       withCredentials: true
     },
-        url: 'https://' + tradableEmbed.oauth_host + '/analyticsId?'+window.location.host,
+        url: 'https://' + tradable.oauth_host + '/analyticsId?'+window.location.host,
         contentType: "application/json; charset=utf-8",
         dataType: 'json'
     });

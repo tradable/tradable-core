@@ -6,6 +6,7 @@ var gulp = require('gulp'),
     gutil = require("gulp-util"),
     license = require('gulp-header-license'),
     replace = require('gulp-replace'),
+    removeCode = require('gulp-remove-code'),
     clean = require('gulp-clean'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
@@ -27,7 +28,7 @@ gulp.task('test', function() {
 
 gulp.task('test', function(){
   gulp.src('./test/test-runner.html')
-  .pipe(open({uri: './test/test-runner.html'}));
+  .pipe(open({ uri: './test/test-runner.html'}));
 });
 
 /***** Build  *****/
@@ -37,19 +38,26 @@ gulp.task('cleanDist', ['test'], function () {
 });
 
 gulp.task('copy-files', ['cleanDist'], function() {
-  return gulp.src(['src/tradable-embed.js'])
+  return gulp.src(['src/tradable.js'])
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('license-embed', ['copy-files'], function () {
+gulp.task('license', ['copy-files'], function () {
     var year = (new Date()).getFullYear();
-    return gulp.src('dist/tradable-embed.js')
+    return gulp.src('dist/tradable.js')
             .pipe(license("/******  Copyright " + year + " Tradable ApS; @license MIT; v" + versionNumber + "  ******/"))
             .pipe(gulp.dest('./dist/'));
 });
 
-gulp.task('minify-js', ['license-embed'], function() {
-  return gulp.src('dist/tradable-embed.js')
+// Removes from the production file the test hook that allows unit testing the anonymous funtions
+gulp.task('remove-test-hook', ['license'], function () {
+    return gulp.src('./dist/tradable.js')
+      .pipe(removeCode({ production: true }))
+      .pipe(gulp.dest('./dist'))
+});
+
+gulp.task('minify-js', ['remove-test-hook'], function() {
+  return gulp.src('dist/tradable.js')
     .pipe(uglify({preserveComments: 'some'})) // keeps comments with @license
 	  .pipe(rename(function (path) {
             if(path.extname === '.js') {
@@ -59,12 +67,12 @@ gulp.task('minify-js', ['license-embed'], function() {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('compress-copy', ['test', 'cleanDist', 'license-embed', 'minify-js', 'copy-files']);
+gulp.task('compress-copy', ['test', 'cleanDist', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
 
 /***** Docs generation  *****/
 
 gulp.task('documentation', ['compress-copy'], function () {
-  return gulp.src('src/tradable-embed.js')
+  return gulp.src('src/tradable.js')
     .pipe(documentation({ format: 'html' }))
     .pipe(gulp.dest('docs'));
 });
@@ -105,13 +113,13 @@ function getJSONTemplateForObject(objName, list) {
 }
 
 gulp.task('buildDocs', ['loadJSONTemplates'], function(){
-   var customStyle = fs.readFileSync("docs/template/style-embed.html", "utf8");
-   var introContent = fs.readFileSync("docs/template/intro-embed.html", "utf8");
+   var customStyle = fs.readFileSync("docs/template/style.html", "utf8");
+   var introContent = fs.readFileSync("docs/template/intro.html", "utf8");
    return gulp.src(['docs/index.html'])
      .pipe(replace("<div class='px2'>", customStyle + "<div class='px2'>")) // Insert custom style inline-css for the documentation
      .pipe(replace("<div class='px2'>", introContent + "<div class='px2'>")) // Insert HTML intro before the rest of the documentation
      .pipe(replace("trEmbDevVersionX", versionNumber))
-     .pipe(replace("<h3 class='mb0 no-anchor'></h3>", "<h3 class='mb0 no-anchor'>tradable-embed-core</h3>")) // set title
+     .pipe(replace("<h3 class='mb0 no-anchor'></h3>", "<h3 class='mb0 no-anchor'>tradable-core</h3>")) // set title
      .pipe(replace("<div class='mb1'><code></code></div>", "<div class='mb1'><code>" + versionNumber + "</code></div>")) // set version
      .pipe(replace('[exampleiframe-begin]', '<iframe width="100%" height="300" allowfullscreen="allowfullscreen" frameborder="0" src="')) // prepare example iframes
      .pipe(replace('[exampleiframe-end]', '"></iframe>')) // prepare example iframes

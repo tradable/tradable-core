@@ -1,9 +1,9 @@
-# tradable-embed-core
-[![Build Status](https://travis-ci.org/tradable/tradable-embed-core.svg?branch=master)](https://travis-ci.org/tradable/tradable-embed-core) [![npm version](https://badge.fury.io/js/tradable-embed-core.svg)](http://badge.fury.io/js/tradable-embed-core) [![Dependency Status](https://david-dm.org/tradable/tradable-embed-core.svg)](https://david-dm.org/tradable/tradable-embed-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-embed-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-embed-core)
+# Tradable Core
+[![Build Status](https://travis-ci.org/tradable/tradable-core.svg?branch=master)](https://travis-ci.org/tradable/tradable-core) [![npm version](https://badge.fury.io/js/tradable-core.svg)](http://badge.fury.io/js/tradable-core) [![Dependency Status](https://david-dm.org/tradable/tradable-core.svg)](https://david-dm.org/tradable/tradable-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-core)
 
 Tradable lets users trade from any app by connecting multiple brokerages through one modern API. This project is a lightweight JavaScript wrapper of the Tradable API that will make the integration with it really easy.
 
-[![NPM](https://nodei.co/npm/tradable-embed-core.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/tradable-embed-core/)
+[![NPM](https://nodei.co/npm/tradable-core.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/tradable-core/)
 
 Documentation: https://tradable.github.io/js/docs/
 
@@ -27,15 +27,15 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.15.4/tradable-embed.min.js" type="text/javascript" 
-        id="tradable-embed" data-app-id="{your_app_id}"></script>
+<script src="//js-api.tradable.com/core/1.15.4/tradable.min.js" type="text/javascript" 
+        id="tradable" data-app-id="{your_app_id}"></script>
 ```
 
-##### Option 2 - Include our [npm module](https://www.npmjs.com/package/tradable-embed-core)
+##### Option 2 - Include our [npm module](https://www.npmjs.com/package/tradable-core)
 
 ```javascript
 npm install jquery --save
-npm install tradable-embed-core --save
+npm install tradable-core --save
 ```
 
 If you decide to go with this approach, you will need to specify the configuration before requiring core:
@@ -43,13 +43,13 @@ If you decide to go with this approach, you will need to specify the configurati
 ```javascript
 jQuery = require("jquery");
 tradableEmbedConfig = {"appId": your-app-id};
-tradableEmbed = require("tradable-embed-core");
+tradableEmbed = require("tradable-core");
 //$ = trEmbJQ; // Uncomment if you want to use our jQuery version
 ```
 
 ### How to use
 
-We have used our knowledge building trading applications to create a framework that will make it really easy to implement any trading application. We will start explaining how to use this framework. However, if our framework does not fit you, you can still use the [light integration](https://github.com/tradable/tradable-embed-core#light-integration).
+We have used our knowledge building trading applications to create a framework that will make it really easy to implement any trading application. We will start explaining how to use this framework. However, if our framework does not fit you, you can still use the [light integration](https://github.com/tradable/tradable-core#light-integration).
 
 ##### Authentication
 
