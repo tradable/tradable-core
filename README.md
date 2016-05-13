@@ -42,8 +42,8 @@ If you decide to go with this approach, you will need to specify the configurati
 
 ```javascript
 jQuery = require("jquery");
-tradableEmbedConfig = {"appId": your-app-id};
-tradableEmbed = require("tradable-core");
+tradableConfig = {"appId": your-app-id};
+tradable = require("tradable-core");
 //$ = trEmbJQ; // Uncomment if you want to use our jQuery version
 ```
 
@@ -57,37 +57,37 @@ The first thing you need to solve to trade enable your application is the authen
 
 You can open the authentication window in a small window the way Facebook does:
 ```javascript
-tradableEmbed.authenticateWithWindow();
+tradable.authenticateWithWindow();
 ```
 
 Or you can simply redirect to the authentication page:
 ```javascript
-tradableEmbed.authenticate();
+tradable.authenticate();
 ```
 
 ##### Tradable ready event
 
 If the user authenticates successfully Tradable Core will notify you about it as follows:
 ```javascript
-tradableEmbed.on("myEmbedReadyListener", "embedReady", function() {
-        console.log("Trading is enabled: " + tradableEmbed.tradingEnabled);
+tradable.on("myEmbedReadyListener", "embedReady", function() {
+        console.log("Trading is enabled: " + tradable.tradingEnabled);
 });
 ```
 
-The `embedReady` listener is notified every time that the status of `tradableEmbed.tradingEnabled` changes. As you might guess, if `tradableEmbed.tradingEnabled` is `true`, it means that the OAuth token was received and the user is successfully authenticated, i.e. you can now execute trades and orders.
+The `embedReady` listener is notified every time that the status of `tradable.tradingEnabled` changes. As you might guess, if `tradable.tradingEnabled` is `true`, it means that the OAuth token was received and the user is successfully authenticated, i.e. you can now execute trades and orders.
 
 Turning the listener off is as easy as:
 ```javascript
-tradableEmbed.off("myEmbedReadyListener", "embedReady");
+tradable.off("myEmbedReadyListener", "embedReady");
 ```
 
 ##### Selected account
 
-If the authentication is successful, Tradable Core will initialize the users' broker account before calling `embedReady`. You can access the account just calling: `tradableEmbed.selectedAccount`.
+If the authentication is successful, Tradable Core will initialize the users' broker account before calling `embedReady`. You can access the account just calling: `tradable.selectedAccount`.
 
-Not only that, Tradable Core will also cache the list of Tradable instruments in `tradableEmbed.availableInstruments`. If you want to access a particular instrument you can use:
+Not only that, Tradable Core will also cache the list of Tradable instruments in `tradable.availableInstruments`. If you want to access a particular instrument you can use:
 ```javascript
-var instrument = tradableEmbed.getInstrumentFromId("EURUSD"); //synchronous
+var instrument = tradable.getInstrumentFromId("EURUSD"); //synchronous
 ```
 
 *Note! Some brokers do not provide the full instrument list. In that case, instruments are gradually cached by Tradable Core for the requested prices (before prices are retrieved). All instruments related to to the open positions and pending orders are cached since the beginning.*
@@ -96,27 +96,27 @@ var instrument = tradableEmbed.getInstrumentFromId("EURUSD"); //synchronous
 
 In order to keep the UI updated with the changes that happen on the account, we provide a a listener that will request the account snapshot every certain time (700 milliseconds by default) and notify with it. The account snapshot is an object that contains everything you need to know about the user's portfolio: Metrics, Positions, Orders and Prices.
 ```javascript
-tradableEmbed.on("myAccountUpdateListener", "accountUpdated", function(snapshot) {
+tradable.on("myAccountUpdateListener", "accountUpdated", function(snapshot) {
      console.log("New snapshot received: " + JSON.stringify(snapshot));
 });
 ```
 
 If you want to subscribe to prices for an instrument you can simply add the instrument id to the updates:
 ```javascript
-tradableEmbed.addInstrumentIdToUpdates("myPricesWidget", "EURUSD");
+tradable.addInstrumentIdToUpdates("myPricesWidget", "EURUSD");
 // Now the snapshot retrieved by the "accountUpdated" event will include prices for the specified instrument
 // To unsubscribe the prices:
-tradableEmbed.removeInstrumentIdFromUpdates("myPricesWidget", "EURUSD");
+tradable.removeInstrumentIdFromUpdates("myPricesWidget", "EURUSD");
 ```
 
 You can customize the account update frequency:
 ```javascript
-tradableEmbed.setAccountUpdateFrequencyMillis(1000); // 1 second updates
+tradable.setAccountUpdateFrequencyMillis(1000); // 1 second updates
 ```
 
 And as always you can turn off the updates:
 ```javascript
-tradableEmbed.off("myAccountUpdateListener", "accountUpdated");
+tradable.off("myAccountUpdateListener", "accountUpdated");
 ```
 
 ##### More
@@ -127,7 +127,7 @@ You can read about the rest of the updates and API calls in our [documentation](
 
 In order to initialize Tradable Core in light mode you just need to feed it with the Tradable token values:
 ```javascript
-tradableEmbed.initializeWithToken(accessToken, endPoint, expiresIn).then(function() {
+tradable.initializeWithToken(accessToken, endPoint, expiresIn).then(function() {
         console.log("You can now use the Tradable API calls");
 });
 ```
