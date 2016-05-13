@@ -1,0 +1,22 @@
+<div style="padding: 1rem;">
+     Welcome to the tradable documentation. Tradable is an open API to easily build financial trading features into any app, through any brokerage. This is the documentation for the tradable javascript SDK, which offers 2 kits:
+
+     <ul>
+          <li><b>core</b>: Lightweight wrapper of the Tradable API that will make the integration with Tradable API really easy.</li>
+          <li><b>ui-kit</b>: See <a href='tradable-embed-ui.js.html'>here</a> (optional)</li>
+     </ul>
+
+     <p>In order to use the tradable core, you need to include the following scripts in your site. We use jQuery in no coflict mode (<a href="https://api.jquery.com/jquery.noconflict/">what?</a>), meaning that after tradable core is executed, the jQuery variable is saved in the global object ‘trEmbJQ’ to avoid conflict:</p>
+
+     <pre class="intro">&lt;script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"&gt;&lt;/script&gt;<br>&lt;script type="text/javascript" id="tradable-embed" src="//js-api.tradable.com/core/trEmbDevVersionX/tradable.min.js" data-app-id="{your_app_id}" <i>data-redirect-uri="optional-custom-redirect-uri"</i>&gt;&lt;/script&gt;</pre>
+
+     <p>Alternatively, you can require our <a href="https://www.npmjs.com/package/tradable-core">npm module</a></p>
+
+     <pre class="intro">npm install tradable-core --save</pre>
+
+     <p>If you do, you will have to define the tradableConfig object before requiring the module:</p>
+
+     <pre class="intro">window.tradableConfig = {"appId": <i>your-app-id</i>, <i>"redirectURI": "optional-custom-redirect-uri"</i>};<br>require("tradable-core");</pre>
+
+     <b>NOTE! The oauth flow doesn't work properly in this documentation site for the codepen examples, for the best experience please see the examples on Codepen.io, you can do that clicking on the "Edit on Codepen" link</b>
+</div>
