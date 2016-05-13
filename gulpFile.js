@@ -1,3 +1,4 @@
+var previousVersionNumber = '1.15.4';
 var versionNumber = '1.16';
 
 var gulp = require('gulp'),
@@ -148,7 +149,13 @@ gulp.task('replace-version', ['documentation'], function(){//copy-docs
     .pipe(gulp.dest('dist'));
 });
 
+// gulp.task('replace-readme-version', ['replace-version'], function(){//copy-docs
+//   return gulp.src(['./README.md'])
+//     .pipe(replace(previousVersionNumber, versionNumber))
+//     .pipe(gulp.dest('./'));
+// });
+
 gulp.task('generateDocs', ['documentation', 'loadJSONTemplates', 'buildDocs']);
 
-gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs']);
+gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs']); //'replace-readme-version'
 
