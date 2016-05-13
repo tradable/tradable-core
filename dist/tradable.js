@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.16  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.16.1  ******/
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
@@ -43,7 +43,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.16',
+        version : '1.16.1',
         app_id: appId,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
