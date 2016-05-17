@@ -9,6 +9,7 @@
   "author": "Oier Izulain",
   "license": "MIT",
   "devDependencies": {
+    "@bigab/gulp-testee": "0.0.2",
     "fs": "0.0.2",
     "gulp": "^3.9.0",
     "gulp-clean": "^0.3.1",

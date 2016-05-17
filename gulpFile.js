@@ -11,7 +11,8 @@ var gulp = require('gulp'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
     request = require("request"),
-    open = require('gulp-open');
+    open = require('gulp-open'),
+    gulpTestee = require('@bigab/gulp-testee');
     //qunit = require('node-qunit-phantomjs');
     //qunit = require('gulp-qunit');
 
@@ -26,9 +27,27 @@ gulp.task('test', function() {
         .pipe(qunit({'phantomjs-options': ["--ssl-protocol=any", "--web-security=false"], 'timeout': 20}));//'binPath': require('phantomjs2').path, 'timeout': 15, , '--ssl-protocol=any', '--ignore-ssl-errors=yes'
 });*/
 
-gulp.task('test', function(){
-  gulp.src('./test/test-runner.html')
-  .pipe(open({ uri: './test/test-runner.html'}));
+// gulp.task('test', function(){
+//   gulp.src('./test/test-runner.html')
+//   .pipe(open({ uri: './test/test-runner.html'}));
+// });
+ 
+// gulp.task('test', function() {
+//   return gulp.src('./test/test-runner.html')
+//           .pipe( gulpTestee({ browsers: ['firefox']}) )
+//           .pipe(gulp.dest('./test/results/'))
+// });
+
+gulp.task('test', function() {
+  return gulp.src('./test/test-runner.html')
+    .pipe( gulpTestee({
+      browsers: ['firefox'],//'phantom', 'safari'
+      reporter: 'Spec',
+      coverage: {
+          reporters: ['html'],
+          ignore: ['node_modules']
+      }
+    }) );
 });
 
 /***** Build  *****/
