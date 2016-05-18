@@ -54,10 +54,6 @@ gulp.task('cleanDist', ['test'], function () {
     return gulp.src('dist', {read: false}).pipe(clean());
 });
 
-gulp.task('cleanDistProd', ['sendResultsToCoveralls'], function () {
-    return gulp.src('dist', {read: false}).pipe(clean());
-});
-
 gulp.task('copy-files', ['cleanDist'], function() {
   return gulp.src(['src/tradable.js'])
     .pipe(gulp.dest('dist'));
@@ -89,7 +85,7 @@ gulp.task('minify-js', ['remove-test-hook'], function() {
 });
 
 gulp.task('compress-copy', ['test', 'cleanDist', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
-gulp.task('compress-copy-prod', ['test', 'sendResultsToCoveralls', 'cleanDistProd', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
+gulp.task('compress-copy-prod', ['test', 'sendResultsToCoveralls', 'cleanDist', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
 
 /***** Docs generation  *****/
 

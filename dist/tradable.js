@@ -226,7 +226,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         off : function(namespace, eventName) {
             if(typeof eventName === "undefined") {
                 for(var evtName in callbackHolder) {
-                    if(callbackHolder.hasOwnProperty(evtName) && callbackHolder[evtName].hasOwnProperty(namespace)) {
+                    if(callbackHolder.hasOwnProperty(evtName)
+                        && namespace in callbackHolder[evtName]
+                        && callbackHolder[evtName].hasOwnProperty(namespace)) {
                         delete callbackHolder[evtName][namespace];
                     }
                 }
