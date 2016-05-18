@@ -8,7 +8,7 @@ var validVersions = ['2.2.2', '2.2.1', '2.2.0', '2.1.4'];
 var invalidVersions = ['2.1.3', '2.1.1', '2.1.0', '2.0.3', '2.0.2', '2.0.1', '2.0.0', '1.12.2', '1.12.1', '1.12.0', '1.11.3', '1.11.2', '1.11.1', '1.11.0', '1.10.2', '1.10.1', '1.10.0', '1.9.1', '1.9.0', '1.8.3', '1.8.2', '1.8.1', '1.8.0', '1.7.2', '1.7.1', '1.7.0', '1.6.4', '1.6.3', '1.6.2', '1.6.1', '1.6.0', '1.5.2', '1.5.1', '1.5.0', '1.4.4', '1.4.3', '1.4.2', '1.4.1', '1.4.0', '1.3.2', '1.3.1', '1.3.0', '1.2.6', '1.2.3'];
 
 QUnit.test( "jQuery min version check", function( assert ) {
-  for(i = 0 ; i < validVersions.length ; i++) {
+  for(var i = 0 ; i < validVersions.length ; i++) {
   	assert.ok( isGreaterOrEqualMinVersion(validVersions[i], minJQueryVersion) === true, validVersions[i] + " isGreaterOrEqualMinVersion " + minJQueryVersion );
   }
   for(i = 0 ; i < invalidVersions.length ; i++) {
@@ -297,28 +297,87 @@ QUnit.test( "Attach TP & SL", function( assert ) {
     });
 });
 
+QUnit.test("Test On Off listener", function ( assert ) {
+    assert.throws(function () {
+        tradable.on("test", "invalidEvent", function () {});
+    }, "Invalid event throws exception");
+
+    assert.throws(function () {
+        tradable.on(1000, "embedReady", function () {});
+    }, "Numeric namespace throws error");
+
+    assert.throws(function () {
+        tradable.on("testNullCallback", "embedReady", null);
+    }, "Invalid callback throws error");
+
+    addRemoveListener("test", "embedReady");
+    addRemoveListener("test", "accountUpdated");
+    addRemoveListener("test", "tokenWillExpire");
+
+    function addRemoveListener(namespace, listener) {
+        // Add listener
+        var callback = function () {};
+        tradable.on(namespace, listener, callback);
+        assert.ok(tradable.testhook.callbackHolder[listener][namespace] === callback, "Callback was saved");
+
+        assert.throws(function () {
+            tradable.on(namespace, listener, function () {});
+        }, "Repeated listener throws error");
+
+        // Remove listener
+        tradable.off(namespace, listener);
+        assert.ok(!tradable.testhook.callbackHolder[listener][namespace], "Callback is successfully turned off");
+    }
+});
+
+QUnit.test("Setting Account Frequency Millis", function ( assert ) {
+    assert.throws(function () {
+        tradable.setAccountUpdateFrequencyMillis("invalidMillis");
+    }, "Millis need to be a number");
+
+    var millis = 1500;
+    tradable.setAccountUpdateFrequencyMillis(millis);
+    assert.ok(tradable.accountUpdateMillis === millis, "Account frequency millis are properly set");
+});
+
+QUnit.test("Open OAuth", function ( assert ) {
+    assert.throws(function () {
+        tradable.openOAuthPage("Wrong type", false);
+    }, "Invalid OAuth endpoint type breaks");
+});
+
 QUnit.test( "Start and stop candle updates", function( assert ) {
     var done = assert.async();
     var from = Date.now() - (1000 * 60 * 60 * 3); //3h
     var callbacks = 0;
     var candle;
     tradable.startCandleUpdates("EURUSD", from, 30, function(data) {
-      if(callbacks > 0) {
-        if(!!candle) {
-          assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
-          tradable.stopCandleUpdates();
-          done();
+        if(callbacks > 0) {
+            if(!!candle) {
+                assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
+                tradable.stopCandleUpdates();
+                done();
+            } else {
+                assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
+                candle = trEmbJQ.extend({}, data[0]);
+                assert.ok(candle.high >= candle.close, "Candle high higher or equal");
+                assert.ok(candle.low <= candle.close, "Candle low lower or equal");
+            }
         } else {
-          assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
-          candle = trEmbJQ.extend({}, data[0]);
-          assert.ok(candle.high >= candle.close, "Candle high higher or equal");
-          assert.ok(candle.low <= candle.close, "Candle low lower or equal");
+            assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
         }
-      } else {
-        assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
-      }
-      callbacks++;
+        callbacks++;
     });
+});
+
+QUnit.test("Sign Out", function ( assert ) {
+    tradable.signOut();
+    assert.ok(tradable.tradingEnabled === false, "Trading disabled");
+
+    assert.ok(!localStorage.getItem('accessToken'+tradable.app_id), "accessToken removed from storage"+localStorage.getItem('accessToken'+tradable.app_id));
+    assert.ok(!localStorage.getItem('authEndpoint'+tradable.app_id), "authEndpoint removed from storage");
+    assert.ok(!localStorage.getItem('tradingEnabled'+tradable.app_id), "tradingEnabled removed from storage");
+    assert.ok(!localStorage.getItem('expirationTimeUTC'+tradable.app_id), "expirationTimeUTC removed from storage");
 });
 
 function findPrices(instrumentId, prices) {
@@ -347,8 +406,8 @@ function getIdentificationToken(type) {
     return deferred;
 }
 
-function getAnonymousId() {    
-    var ajaxPromise = trEmbJQ.ajax({
+function getAnonymousId() {
+    return trEmbJQ.ajax({
         type: "GET",
         crossDomain: true,
         xhrFields: {
@@ -358,6 +417,4 @@ function getAnonymousId() {
         contentType: "application/json; charset=utf-8",
         dataType: 'json'
     });
-
-    return ajaxPromise;
 }

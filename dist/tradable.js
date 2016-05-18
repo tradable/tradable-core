@@ -131,8 +131,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                       (type.toUpperCase() === "APPROVAL") ? tradable.approval_page_loc : 
                       (type.toUpperCase() === "BROKER_SIGNUP") ? tradable.broker_signup_loc : undefined;
             if(!url) {
-                console.error("Choose a correct type: AUTHENTICATE, LOGIN, APPROVAL or BROKER_SIGNUP");
-                return;
+                throw "Choose a correct type: AUTHENTICATE, LOGIN, APPROVAL or BROKER_SIGNUP";
             }
             if(typeof brokerId !== "undefined") {
                 url = url + "&broker_id=" + brokerId;
@@ -183,8 +182,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         on : function(namespace, eventName, callback) {
             if(!tradable.isEventValid(eventName)) {
-                console.error("Plase provide a valid eventName: " + availableEvents);
-                return;
+                throw "Please provide a valid eventName: " + availableEvents;
             }
 
             if(!callbackHolder[eventName]) {
@@ -194,17 +192,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             // Check namespace validity
             if(typeof namespace !== "string") {
-                console.error("The given event namespace is invalid (needs to be a string)");
-                return;
+                throw "The given event namespace is invalid (needs to be a string)";
             } else if(typeof callbackHolder[eventName][namespace] !== "undefined") {
-                console.error("The given event namespace is already taken, 'off' the event first to change it");
-                return;
+                throw "The given event namespace is already taken, 'off' the event first to change it";
             }
 
             // Check callback validity
             if(typeof callback !== "function") {
-                console.error("Please provide a valid callback function");
-                return;
+                throw "Please provide a valid callback function";
             }
 
             switch(eventName) {
@@ -231,7 +226,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         off : function(namespace, eventName) {
             if(typeof eventName === "undefined") {
                 for(var evtName in callbackHolder) {
-                    if(namespace in callbackHolder[evtName]) {
+                    if(callbackHolder.hasOwnProperty(evtName) && callbackHolder[evtName].hasOwnProperty(namespace)) {
                         delete callbackHolder[evtName][namespace];
                     }
                 }
@@ -286,7 +281,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     tradable.accountUpdateInterval = setInterval(processAccountUpdate, tradable.accountUpdateMillis);
                 }
             } else {
-                console.error("Please specify a valid update frequency");
+                throw "Please specify a valid update frequency";
             }
         },
         addSymbolToUpdates: function(updateClientId, instrumentId) {
@@ -422,7 +417,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             });
 
             ajaxPromise.then(function(){},
-                function(jqXHR, message, error){
+                function(jqXHR){
                     if(jqXHR.responseJSON) {
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
                             notifyTokenExpired();
@@ -1007,24 +1002,23 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             function matchInstruments(instruments, query) {
                 var matcher = new RegExp( escRegex( query ), "i" );
-                var result = $.grep(instruments, function(value) {
+                return $.grep(instruments, function(value) {
                     return matcher.test(value.symbol)
                         || matcher.test(value.brokerageAccountSymbol)
                         || matcher.test(value.displayName)
                         || matcher.test(value.type);
                 });
-                return result;
             }
             function escRegex(s) {
                 return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
             }
             // Normalize Instrument object to match the InstrumentSearchResult
             function normalizeInstrumentObject(originalInstrument) {
-                var elem = $.extend({}, originalInstrument)
+                var elem = $.extend({}, originalInstrument);
                 var instrumentResultProperties = ["instrumentId", "symbol", "brokerageAccountSymbol", "displayName", "shortDescription", "type"];
                 var propertiesToRemove = [];
                 for(var property in elem) {
-                    if($.inArray(property, instrumentResultProperties) < 0) {
+                    if(elem.hasOwnProperty(property) && $.inArray(property, instrumentResultProperties) < 0) {
                         propertiesToRemove.push(property);
                     }
                 }
@@ -1761,7 +1755,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.lastSnapshot = undefined;
 
             var accountQty = tradable.accounts.length;
-            tradable.initializeWithToken(access_token, end_point, expires_in).then(function(accounts) {
+            tradable.initializeWithToken(access_token, end_point, expires_in).then(function() {
                 return setSelectedAccountAndNotify(set_latest_account, accountQty);
             }).then(function() {
                 deferred.resolve();
@@ -1947,7 +1941,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         resetInstrumentCache();
-        return getDefaultInstruments().then(function(acctInstruments) {
+        return getDefaultInstruments().then(function() {
             console.log('Instruments ready');
             if(reset) {
                 tradable.tradingEnabled = true;
@@ -2093,7 +2087,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         console.log("Validating token...");
         // Check token validity
         tradable.getAccounts().then(
-            function(accounts) {
+            function() {
                 tradable.enableTrading(tradable.accessToken, tradable.authEndpoint);
             },
             function() {
@@ -2231,10 +2225,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         if(tradable.isEventValid(eventName)) {
             if(typeof callbackHolder[eventName] !== undefined) {
                 for(var namespace in callbackHolder[eventName]) {
-                    if(typeof data !== "undefined") {
-                        callbackHolder[eventName][namespace](data);
-                    } else {
-                        callbackHolder[eventName][namespace]();
+                    if(callbackHolder[eventName].hasOwnProperty(namespace)) {
+                        if(typeof data !== "undefined") {
+                            callbackHolder[eventName][namespace](data);
+                        } else {
+                            callbackHolder[eventName][namespace]();
+                        }
                     }
                 }
             }
@@ -2274,16 +2270,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         });
 
         return deferred;
-    }
-
-    function getAuthUrl(brokerId) {
-        var url;
-        if(brokerId) {
-            url = tradable.auth_loc + "&broker_id=" + brokerId;
-        } else {
-            url = tradable.auth_loc;
-        }
-        return url;
     }
 
     function hashCode(str){
@@ -2333,14 +2319,11 @@ function isGreaterOrEqualMinVersion(a, b) {
                 return a;
             else
                 return b;
-
-            if (bb.length < i)
-                return a;
         }
 
         if (bb.length > aa.length)
             return b;
     };
     
-    return (typeof highest(a, b) === "undefined" || highest(a, b) !== b) ? true : false;
+    return !!(typeof highest(a, b) === "undefined" || highest(a, b) !== b);
 }
