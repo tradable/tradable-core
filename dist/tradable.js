@@ -1,5 +1,9 @@
 /******  Copyright 2016 Tradable ApS; @license MIT; v1.16.1  ******/
 
+// Avoid console errors when not supported
+if (typeof console === "undefined" || typeof console.log === "undefined")
+    console = { log: function() {}, warn: function() {} };
+
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
     console.warn('tradable requires jQuery to run');
@@ -18,10 +22,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 // Immediately invoked function expression (IIFE)
 (function(global, $) {
     'use strict'; // It's good practice
-
-    // Avoid console errors when not supported
-    if (typeof console === "undefined" || typeof console.log === "undefined")
-        global.console = { log: function() {} };
 
     global.tradableConfig = initializeTradableConfig();
 
@@ -1008,9 +1008,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             function matchInstruments(instruments, query) {
                 var matcher = new RegExp( escRegex( query ), "i" );
                 var result = $.grep(instruments, function(value) {
-                    return matcher.test(value.symbol) 
+                    return matcher.test(value.symbol)
                         || matcher.test(value.brokerageAccountSymbol)
-                        || matcher.test(value.displayName) 
+                        || matcher.test(value.displayName)
                         || matcher.test(value.type);
                 });
                 return result;
@@ -1228,11 +1228,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-callback-begin_Order_object-callback-end_
          */
         placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
-            var order = {"amount": amount, "price": price, "side": side, "instrumentId": instrumentId, "type": type};
+            var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
             if(tpDistance)
                 order["takeProfitDistance"] = tpDistance;
             if(slDistance)
-                order["stopLossDistance"] = slDistance
+                order["stopLossDistance"] = slDistance;
             return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
         //v1/accounts/{accountId}/orders/pending
@@ -1661,7 +1661,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 } else {
                     promise = tradable.makeAccountRequest("POST", accountId, "prices/", instrumentIdsObj);
                 }
-                
+
                 promise.then(function(data) {
                     deferred.resolve(data);
                 }, function(error) {

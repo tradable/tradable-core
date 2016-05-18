@@ -297,29 +297,29 @@ QUnit.test( "Attach TP & SL", function( assert ) {
     });
 });
 
-// QUnit.test( "Start and stop candle updates", function( assert ) {
-//     var done = assert.async();
-//     var from = Date.now() - (1000 * 60 * 60 * 3); //3h
-//     var callbacks = 0;
-//     var candle;
-//     tradable.startCandleUpdates("EURUSD", from, 30, function(data) {
-//       if(callbacks > 0) {
-//         if(!!candle) {
-//           assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
-//           tradable.stopCandleUpdates();
-//           done();
-//         } else {
-//           assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
-//           candle = trEmbJQ.extend({}, data[0]);
-//           assert.ok(candle.high >= candle.close, "Candle high higher or equal");
-//           assert.ok(candle.low <= candle.close, "Candle low lower or equal");
-//         }
-//       } else {
-//         assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
-//       }
-//       callbacks++;
-//     });
-// });
+QUnit.test( "Start and stop candle updates", function( assert ) {
+    var done = assert.async();
+    var from = Date.now() - (1000 * 60 * 60 * 3); //3h
+    var callbacks = 0;
+    var candle;
+    tradable.startCandleUpdates("EURUSD", from, 30, function(data) {
+      if(callbacks > 0) {
+        if(!!candle) {
+          assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
+          tradable.stopCandleUpdates();
+          done();
+        } else {
+          assert.ok(data.length === 1, "First update received: " + JSON.stringify(data));
+          candle = trEmbJQ.extend({}, data[0]);
+          assert.ok(candle.high >= candle.close, "Candle high higher or equal");
+          assert.ok(candle.low <= candle.close, "Candle low lower or equal");
+        }
+      } else {
+        assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
+      }
+      callbacks++;
+    });
+});
 
 function findPrices(instrumentId, prices) {
     var priceFound = false;

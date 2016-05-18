@@ -17,5 +17,8 @@ script: gulp buildSDK
 before_script:
   - export DISPLAY=:99.0
   - sh -e /etc/init.d/xvfb start
+addons:
+    code_climate:
+        repo_token: f1e9e96a2125b6e278aeed6df6091fa0fd1e04d5a4b0685843a16c25f9b912f2
 notifications:
   slack: tradable:XOmWzsyXwAqK3jxRZaESB0ei

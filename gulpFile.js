@@ -12,43 +12,30 @@ var gulp = require('gulp'),
     fs = require("fs"),
     request = require("request"),
     open = require('gulp-open'),
-    gulpTestee = require('@bigab/gulp-testee');
-    //qunit = require('node-qunit-phantomjs');
-    //qunit = require('gulp-qunit');
+    testee = require('testee');
 
 /***** Test *****/
 
-/*gulp.task('test', function() {
-    return qunit('./test/test-runner.html');
-});
-
 gulp.task('test', function() {
-    return gulp.src('./test/test-runner.html')
-        .pipe(qunit({'phantomjs-options': ["--ssl-protocol=any", "--web-security=false"], 'timeout': 20}));//'binPath': require('phantomjs2').path, 'timeout': 15, , '--ssl-protocol=any', '--ignore-ssl-errors=yes'
-});*/
-
-// gulp.task('test', function(){
-//   gulp.src('./test/test-runner.html')
-//   .pipe(open({ uri: './test/test-runner.html'}));
-// });
- 
-// gulp.task('test', function() {
-//   return gulp.src('./test/test-runner.html')
-//           .pipe( gulpTestee({ browsers: ['firefox']}) )
-//           .pipe(gulp.dest('./test/results/'))
-// });
-
-gulp.task('test', function() {
-  return gulp.src('./test/test-runner.html')
-    .pipe( gulpTestee({
-      browsers: ['firefox'],//'phantom', 'safari'
+    return testee.test(['./test/test-runner.html'], 'firefox', { //'phantom', 'safari'
       reporter: 'Spec',
       coverage: {
-          reporters: ['html'],
-          ignore: ['node_modules']
+          dir: 'test/coverage',
+          reporters: ['lcovonly', 'text', 'html'],
+          ignore: ['node_modules', 'tests.js', 'dist']
       }
-    }) );
+    });
 });
+
+gulp.task('openCoverage', function(){
+  gulp.src('./test/coverage/index.html')
+  .pipe(open({ uri: './test/coverage/index.html'}));
+});
+
+// gulp.task('sendResultsToCoveralls', ['test'], function() {
+//     return gulp.src('./test/coverage/lcov.info')
+//       .pipe(coveralls());
+// });
 
 /***** Build  *****/
 
