@@ -408,7 +408,7 @@ QUnit.test("Test On Off listener", function ( assert ) {
 });
 
 QUnit.test("Test onEmbedReady", function ( assert ) {
-    var callback = function () {console.log("aa")};
+    var callback = function () {};
     tradable.onEmbedReady(callback);
     var found = false;
     for(var i = 0; i < tradable.readyCallbacks.length; i++) {
@@ -423,7 +423,7 @@ QUnit.test("Test onEmbedReady", function ( assert ) {
 });
 
 QUnit.test("Test onAccountUpdated", function ( assert ) {
-    var callback = function () {console.log("aa")};
+    var callback = function () {};
     tradable.onAccountUpdated(callback);
     tradable.onAccountUpdated(callback);
     var found = 0;
@@ -554,6 +554,19 @@ QUnit.test( "Authenticate with City Index test account", function( assert ) {
 QUnit.test( "Search and Get Instruments with City Index test account", function( assert ) {
     var done = assert.async();
     searchAndGetIntruments(assert, done);
+});
+
+QUnit.test( "Exclude Account and validate token", function( assert ) {
+    var accountId = tradable.selectedAccount.uniqueId;
+    tradable.excludeCurrentAccount();
+    var found = false;
+    for (var i = 0; i < tradable.accounts.length; i++) {
+        if(accountId === tradable.accounts[i].uniqueId) {
+            found = true;
+        }
+    }
+    assert.ok(!found, "Account excluded");
+    tradable.testhook.validateToken();
 });
 
 function authenticateWithCredentials(done, assert, login, pass, brokerId) {

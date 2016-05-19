@@ -1763,13 +1763,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.lastSnapshot = undefined;
 
             var accountQty = tradable.accounts.length;
-            tradable.initializeWithToken(access_token, end_point, expires_in).then(function() {
-                return setSelectedAccountAndNotify(set_latest_account, accountQty);
-            }).then(function() {
+            if(accountQty > 0) {
+                tradable.initializeWithToken(access_token, end_point, expires_in).then(function() {
+                    return setSelectedAccountAndNotify(set_latest_account, accountQty);
+                }).then(function() {
+                    deferred.resolve();
+                }, function(error) {
+                    deferred.reject(error);
+                });
+            } else {
+                setTradingEnabled(false);
+                notifyReadyCallbacks();
                 deferred.resolve();
-            }, function(error) {
-                deferred.reject(error);
-            });
+            }
 
             return deferred;
         }
