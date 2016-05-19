@@ -89,6 +89,7 @@ QUnit.test( "Initialize with token", function( assert ) {
   		done();
   	}, function(error) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
   	});
 });
 
@@ -114,6 +115,7 @@ function searchAndGetIntruments(assert, done) {
         done();
     }, function (error) {
         QUnit.pushFailure(JSON.stringify(error.responseJSON));
+        done();
     });
 }
 
@@ -125,12 +127,13 @@ QUnit.test( "Enable trading with token", function( assert ) {
       done();
     }, function(error) {
       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
     });
 });
 
 QUnit.test( "Authenticate with test account", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "tradablecorecfh@tradable.com", "tradable", 1);
+    authenticateWithCredentials(done, assert, "tradablecore@tradable.com", "tradable", 1);
 });
 
 QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id", function( assert ) {
@@ -178,6 +181,7 @@ QUnit.test( "Get Metrics with tradableEmbed with resolve reject callbacks", func
 
     function error(error) {
         QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
     }
 });
 
@@ -204,7 +208,8 @@ QUnit.test( "Get Prices", function( assert ) {
 
         done();
      }, function(error) {
-       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+         QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+         done();
      });
 });
 
@@ -244,6 +249,7 @@ QUnit.test( "Place, Get and Modify order", function( assert ) {
         done();
     }, function(error) {
         QUnit.pushFailure( JSON.stringify(error) );
+        done();
     });
 });
 
@@ -467,6 +473,7 @@ QUnit.test( "Test getDailyClose", function( assert ) {
     }
     function err(error) {
         QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
     }
 });
 
@@ -517,6 +524,7 @@ function authenticateWithCredentials(done, assert, login, pass, brokerId) {
         done();
     }, function (err) {
         QUnit.pushFailure(JSON.stringify(err.responseJSON));
+        done();
     });
 }
 
