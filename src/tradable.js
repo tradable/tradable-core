@@ -1,7 +1,8 @@
 
 // Avoid console errors when not supported
-if (typeof console === "undefined" || typeof console.log === "undefined")
+if (typeof console === "undefined" || typeof console.log === "undefined") {
     console = { log: function() {}, warn: function() {} };
+}
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {

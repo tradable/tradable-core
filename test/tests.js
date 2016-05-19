@@ -94,24 +94,28 @@ QUnit.test( "Initialize with token", function( assert ) {
 
 QUnit.test( "Search and Get Instruments", function( assert ) {
     var done = assert.async();
-    var accountId = tradable.accounts[0].uniqueId;
-    tradable.searchInstrumentsForAccount(accountId, "EUR").then(function(instrumentResults) {
-  		assert.ok( instrumentResults.length > 0 , " Got " + instrumentResults.length + " Instrument Search Results " );
-  		assert.ok( Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
-  		var insIds = [];
-  		trEmbJQ(instrumentResults).each(function(idx, res) {
-  			insIds.push(res.instrumentId);
-  		});
-  		assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
-  		return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
-  	}).then(function(instruments) {
-  		assert.ok( instruments.instruments.length > 0 , " Got " + instruments.instruments.length + "Instruments " );
-  		assert.ok( Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
-  		done();
-  	}, function(error) {
-  		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
-  	});
+    searchAndGetIntruments(assert, done);
 });
+
+function searchAndGetIntruments(assert, done) {
+    var accountId = tradable.accounts[0].uniqueId;
+    tradable.searchInstrumentsForAccount(accountId, "EUR").then(function (instrumentResults) {
+        assert.ok(instrumentResults.length > 0, " Got " + instrumentResults.length + " Instrument Search Results ");
+        assert.ok(Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
+        var insIds = [];
+        trEmbJQ(instrumentResults).each(function (idx, res) {
+            insIds.push(res.instrumentId);
+        });
+        assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
+        return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
+    }).then(function (instruments) {
+        assert.ok(instruments.instruments.length > 0, " Got " + instruments.instruments.length + "Instruments ");
+        assert.ok(Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
+        done();
+    }, function (error) {
+        QUnit.pushFailure(JSON.stringify(error.responseJSON));
+    });
+}
 
 QUnit.test( "Enable trading with token", function( assert ) {
     var done = assert.async();
@@ -126,13 +130,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
 
 QUnit.test( "Authenticate with test account", function( assert ) {
     var done = assert.async();
-    var brokerId = 1;
-    tradable.authenticateWithCredentials(brokerId, "tradablecorecfh@tradable.com", "tradable").then(function () {
-        assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
-        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
-        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.brokerId === brokerId, "Correct account selected" );
-        done();
-    });
+    authenticateWithCredentials(done, assert, "tradablecorecfh@tradable.com", "tradable", 1);
 });
 
 QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id", function( assert ) {
@@ -454,12 +452,22 @@ QUnit.test( "Test getDailyClose", function( assert ) {
     var done = assert.async();
     var symbols = ["EURUSD", "USDCAD"];
     tradable.getLastDailyClose(symbols).then(function (data) {
-        assert.ok(data.length === symbols.length, "Received daily close for all symbols");
-        assert.ok(typeof data[0].close === "number", "Received close price");
-        assert.ok(typeof data[0].timestamp === "number", "Timestamp received");
-        assert.ok(typeof data[0].symbol === "string", "Received symbol");
-        done();
-    });
+        checkData(data, "deferred");
+        tradable.getLastDailyClose(symbols, function (data) {
+            checkData(data, "resolve, reject");
+            done();
+        }, err);
+    }, err);
+
+    function checkData(data, text) {
+        assert.ok(data.length === symbols.length, text+": Received daily close for all symbols");
+        assert.ok(typeof data[0].close === "number", text+": Received close price");
+        assert.ok(typeof data[0].timestamp === "number", text+": Timestamp received");
+        assert.ok(typeof data[0].symbol === "string", text+": Received symbol");
+    }
+    function err(error) {
+        QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+    }
 });
 
 QUnit.test( "Start and stop candle updates", function( assert ) {
@@ -489,6 +497,28 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
 QUnit.test("Sign Out", function ( assert ) {
     signOut(assert);
 });
+
+QUnit.test( "Authenticate with City Index test account", function( assert ) {
+    var done = assert.async();
+    authenticateWithCredentials(done, assert, "DM845045", "tradable", 12);
+});
+
+QUnit.test( "Search and Get Instruments with City Index test account", function( assert ) {
+    var done = assert.async();
+    searchAndGetIntruments(assert, done);
+});
+
+function authenticateWithCredentials(done, assert, login, pass, brokerId) {
+    signOut(assert);
+    tradable.authenticateWithCredentials(brokerId, login, pass).then(function () {
+        assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
+        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
+        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.brokerId === brokerId, "Correct account selected" );
+        done();
+    }, function (err) {
+        QUnit.pushFailure(JSON.stringify(err.responseJSON));
+    });
+}
 
 function signOut(assert) {
     tradable.signOut();
