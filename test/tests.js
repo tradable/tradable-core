@@ -86,6 +86,7 @@ QUnit.test( "Initialize with token", function( assert ) {
     }).then(function() {
   		assert.ok( !!tradable.accessToken , "Access Token saved: " + tradable.accessToken );
   		assert.ok( tradable.accounts.length > 0 , "Accounts cached" );
+        assert.ok(tradable.getRemainingTokenMillis() > 0, "Remaining token millis available");
   		done();
   	}, function(error) {
   		QUnit.pushFailure( JSON.stringify(error.responseJSON) );
@@ -329,7 +330,47 @@ QUnit.test( "Attach TP & SL", function( assert ) {
       assert.ok(true, "Position closed");
       done();
     }, function(error) {
-      console.log('Error trying to decrement: ' + JSON.stringify(error.responseJSON));
+         QUnit.pushFailure(JSON.stringify(error.responseJSON));
+         done();
+    });
+});
+
+QUnit.test( "Place Order with protections", function( assert ) {
+    var done = assert.async();
+    var pos;
+    var instrumentId = "EURUSD";
+    var side = "SELL";
+    var amt = 1000;
+
+    tradable.placeOrderWithProtectionsForAccount(tradable.selectedAccount.uniqueId, amt, 0, side, instrumentId, "MARKET", 0.0025, 0.0025).then(function (order) {
+        assert.ok(!!order, 'Order with id: ' + order.id + ' received');
+        assert.ok(order.side === side, "Position with side");
+        assert.ok(order.amount === amt, "Position with amount");
+
+        return tradable.getOpenPositions();
+    }).then(function(positions){
+        pos = positions[0];
+        assert.ok(pos.takeprofit, "Position with takeprofit");
+        assert.ok(pos.stoploss, "Position with stoploss");
+        assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
+
+        return tradable.cancelTakeProfitForAccount(tradable.selectedAccount.uniqueId, pos.id);
+    }).then(function(){
+        return tradable.getPositionById(pos.id);
+    }).then(function(position){
+        assert.ok(!!position && !position.takeprofit, "cancelTakeProfitForAccount succeeded");
+        return tradable.cancelStopLossForAccount(tradable.selectedAccount.uniqueId, pos.id);
+    }).then(function(){
+        return tradable.getPositionById(pos.id);
+    }).then(function(position){
+        assert.ok(!!position && !position.stoploss, "cancelStopLossForAccount succeeded");
+        return tradable.closePosition(pos.id);
+    }).then(function(){
+        assert.ok(true, "Position closed");
+        done();
+    }, function(error) {
+        QUnit.pushFailure(JSON.stringify(error.responseJSON));
+        done();
     });
 });
 

@@ -11,8 +11,7 @@ var gulp = require('gulp'),
     documentation = require('gulp-documentation'),
     fs = require("fs"),
     request = require("request"),
-    testee = require('testee'),
-    coveralls = require('gulp-coveralls');
+    testee = require('testee');
 
 /***** Test *****/
 
@@ -25,27 +24,6 @@ gulp.task('test', function() {
           ignore: ['node_modules', 'tests.js', 'dist']
       }
     });
-});
-
-gulp.task('sendResultsToCoveralls', ['test'], function() {
-  return gulp.src('./test/coverage/lcov.info')
-    .pipe(coveralls({
-        // Options relevant to all targets
-        options: {
-          // When true, grunt-coveralls will only print a warning rather than
-          // an error, to prevent CI builds from failing unnecessarily (e.g. if
-          // coveralls.io is down). Optional, defaults to false.
-          force: false
-        },
-
-        your_target: {
-          // LCOV coverage file (can be string, glob or array)
-          src: './test/coverage/lcov.info',
-          options: {
-            // Any options for just this target
-          }
-        }
-    }));
 });
 
 /***** Build  *****/
@@ -85,7 +63,6 @@ gulp.task('minify-js', ['remove-test-hook'], function() {
 });
 
 gulp.task('compress-copy', ['test', 'cleanDist', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
-gulp.task('compress-copy-prod', ['test', 'sendResultsToCoveralls', 'cleanDist', 'license', 'remove-test-hook', 'minify-js', 'copy-files']);
 
 /***** Docs generation  *****/
 
@@ -168,6 +145,4 @@ gulp.task('replace-version', ['documentation'], function(){//copy-docs
 
 gulp.task('generateDocs', ['documentation', 'loadJSONTemplates', 'buildDocs']);
 
-gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs']); 
-
-gulp.task('buildSDKProd', ['compress-copy-prod', 'replace-version', 'generateDocs']); 
+gulp.task('buildSDK', ['compress-copy', 'replace-version', 'generateDocs']);
