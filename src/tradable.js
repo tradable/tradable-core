@@ -246,8 +246,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/avPzgP/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          */
         onEmbedReady : function (callback) {
-            tradable.readyCallbacks.push(callback);
-            tradable.initEmbedReady(callback);
+            if(callback && typeof callback === "function") {
+                tradable.readyCallbacks.push(callback);
+                tradable.initEmbedReady(callback);
+            } else {
+                throw "The specified callback is not a function";
+            }
         },
         accountUpdateInterval: null,
         initAccountUpdated : function() {
@@ -261,13 +265,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * [exampleiframe-begin]//codepen.io/tradableEmbed/embed/rObOqE/?height=300&theme-id=21042&default-tab=js[exampleiframe-end]
          */
         onAccountUpdated : function(callback) {
-            if(callback) {
+            if(callback && typeof callback === "function") {
                 tradable.initAccountUpdated();
                 var callbackHash = hashCode(callback.toString());
                 if($.inArray(callbackHash, accountUpdatedCallbackHashes) === -1) {
                     accountUpdatedCallbacks.push(callback);
                     accountUpdatedCallbackHashes.push(callbackHash);
                 }
+            } else {
+                throw "The specified callback is not a function";
             }
         },
         /**
@@ -304,8 +310,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         addInstrumentIdToUpdates: function(updateClientId, instrumentId) {
             if(updateClientId.indexOf(":") !== -1) {
-                console.error("It is not allowed to include a colon ':' in the updateClientId");
-                return;
+                throw "It is not allowed to include a colon ':' in the updateClientId";
             }
             var instrumentKey = instrumentId + ":" + updateClientId;
             if($.inArray(instrumentKey, tradable.instrumentKeysForAccountUpdates) === -1) {//$.inArray(instrumentId, tradable.availableSymbols) !== -1
@@ -1806,30 +1811,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         function processHashFragment(hashFragment, tradable){
-            var accessToken;
-            var endPoint;
-            var expiresIn;
-
             tradable.tradingEnabled = false;
             if(isLocalStorageSupported()) {
                 localStorage.setItem("tradingEnabled:"+appId, false);
             }
 
-            var keyValues = hashFragment.replace('#', '').split('&');
-            $(keyValues).each(function(index, keyValuePair){
-                var kvPair = keyValuePair.split('=');
-                var key = kvPair[0];
-                var value = kvPair[1];
-                if(key === 'access_token') {
-                    accessToken = value;
-                } else if(key === 'endpointURL') {
-                    endPoint = value;
-                } else if(key === 'expires_in') {
-                    expiresIn = value;
-                }
-            });
-            if(!!accessToken && !!endPoint) {
-                tradable.enableTrading(accessToken, endPoint, expiresIn);
+            var trToken = getTokenValuesFromHashFragment(hashFragment);
+
+            if(!!trToken.accessToken && !!trToken.endPoint) {
+                tradable.enableTrading(trToken.accessToken, trToken.endPoint, trToken.expiresIn);
                 if(window.name === "osLaunch") {
                     window.close();
                 }
@@ -1838,6 +1828,29 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return false;
             }
         }
+    }
+
+    // Extracts the token values from a url's hash fragment
+    function getTokenValuesFromHashFragment(hashFragment) {
+        var trToken = {
+            'accessToken' : undefined,
+            'endPoint' : undefined,
+            'expiresIn' : undefined
+        };
+        var keyValues = hashFragment.replace('#', '').split('&');
+        $(keyValues).each(function (index, keyValuePair) {
+            var kvPair = keyValuePair.split('=');
+            var key = kvPair[0];
+            var value = kvPair[1];
+            if (key === 'access_token') {
+                trToken.accessToken = value;
+            } else if (key === 'endpointURL') {
+                trToken.endPoint = value;
+            } else if (key === 'expires_in') {
+                trToken.expiresIn = value;
+            }
+        });
+        return trToken;
     }
 
     // Initialize tradableConfig object from script attributes or config object
@@ -2295,6 +2308,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.testhook = {};
     tradable.testhook.initializeTradableConfig = initializeTradableConfig;
     tradable.testhook.callbackHolder = callbackHolder;
+    tradable.testhook.accountUpdatedCallbacks = accountUpdatedCallbacks;
+    tradable.testhook.getTokenValuesFromHashFragment = getTokenValuesFromHashFragment;
     //endRemoveIf(production) 
     
     // Global

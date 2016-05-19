@@ -79,6 +79,7 @@ QUnit.test( "Test tradableConfig object initialization", function( assert ) {
 var apiToken;
 QUnit.test( "Initialize with token", function( assert ) {
     var done = assert.async();
+
     getIdentificationToken("FOREX").then(function(token) {
       apiToken = token;
       return tradable.initializeWithToken(token.apiTokenValue, token.apiEndpoint, token.expires);
@@ -123,6 +124,35 @@ QUnit.test( "Enable trading with token", function( assert ) {
     });
 });
 
+QUnit.test( "Authenticate with test account", function( assert ) {
+    var done = assert.async();
+    var brokerId = 1;
+    tradable.authenticateWithCredentials(brokerId, "tradablecorecfh@tradable.com", "tradable").then(function () {
+        assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
+        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
+        assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.brokerId === brokerId, "Correct account selected" );
+        done();
+    });
+});
+
+QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id", function( assert ) {
+    var symbol = "EURUSD";
+    var instrument = tradable.getInstrumentFromSymbol(symbol);
+    assert.ok(symbol === instrument.symbol, "getInstrumentFromSymbol");
+
+    instrument = tradable.getInstrumentFromSymbol(null);
+    assert.ok(!instrument, "getInstrumentFromSymbol retrieves null when symbol not valid");
+
+    instrument = tradable.getInstrumentFromId(symbol);
+    assert.ok(symbol === instrument.symbol, "getInstrumentFromId");
+
+    instrument = tradable.getInstrumentFromId(null);
+    assert.ok(!instrument, "getInstrumentFromId retrieves null when symbol not valid");
+
+    instrument = tradable.getInstrumentFromBrokerageAccountSymbol(symbol);
+    assert.ok(symbol === instrument.brokerageAccountSymbol, "getInstrumentFromId");
+});
+
 QUnit.test( "Get Account Snapshot updates", function( assert ) {
     var done = assert.async();
 
@@ -137,18 +167,20 @@ QUnit.test( "Get Account Snapshot updates", function( assert ) {
 });
 
 // Using tradableEmbed for backwards compatibility testing
-QUnit.test( "Get Metrics with tradableEmbed", function( assert ) {
+QUnit.test( "Get Metrics with tradableEmbed with resolve reject callbacks", function( assert ) {
      var done = assert.async();
 
-     tradableEmbed.getMetrics().then(function(metrics){
+     tradableEmbed.getMetrics(function(metrics){
         assert.ok(!!metrics, "Account metrics received");
-        return tradableEmbed.getMetricsForAccount(tradableEmbed.selectedAccount.uniqueId);
-     }).then(function(metrics){
-       assert.ok(!!metrics, "Account metrics For Account received");
-       done();
-     }, function(error) {
-       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
-     });
+        tradableEmbed.getMetricsForAccount(tradableEmbed.selectedAccount.uniqueId, function(metrics){
+            assert.ok(!!metrics, "Account metrics For Account received");
+            done();
+        }, error);
+     }, error);
+
+    function error(error) {
+        QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+    }
 });
 
 QUnit.test( "Get Prices", function( assert ) {
@@ -330,6 +362,65 @@ QUnit.test("Test On Off listener", function ( assert ) {
     }
 });
 
+QUnit.test("Test onEmbedReady", function ( assert ) {
+    var callback = function () {console.log("aa")};
+    tradable.onEmbedReady(callback);
+    var found = false;
+    for(var i = 0; i < tradable.readyCallbacks.length; i++) {
+        if(tradable.readyCallbacks[i] === callback) {
+            found = true; break;
+        }
+    }
+    assert.ok(found, "Embed ready callback added.");
+    assert.throws(function () {
+        tradable.onEmbedReady(null);
+    }, "Invalid callback breaks");
+});
+
+QUnit.test("Test onAccountUpdated", function ( assert ) {
+    var callback = function () {console.log("aa")};
+    tradable.onAccountUpdated(callback);
+    tradable.onAccountUpdated(callback);
+    var found = 0;
+    for (var i = 0; i < tradable.testhook.accountUpdatedCallbacks.length; i++) {
+        if(tradable.testhook.accountUpdatedCallbacks[i] === callback)
+            found++;
+    }
+    assert.ok(found > 0, "Account updated callback added.");
+    assert.ok(found === 1, "Account updated callback added only once.");
+    assert.throws(function () {
+        tradable.onAccountUpdated(null);
+    }, "Invalid callback breaks");
+});
+
+QUnit.test("Test addSymboToUpdates removeSymbolFromUpdates", function ( assert ) {
+    var updateClientId = "myClientId";
+    var symbol = "EURUSD";
+    assert.throws(function () {
+        tradable.addSymbolToUpdates("myClientId:ass", symbol);
+    }, "Invalid clientId breaks");
+
+    tradable.addSymbolToUpdates(updateClientId, symbol);
+    tradable.addSymbolToUpdates(updateClientId, symbol);
+
+    var found = findSymbolForUpdates(updateClientId);
+    assert.ok(found > 0, "Symbol added to id updates");
+    assert.ok(found === 1, "Symbol added to id updates only once");
+    
+    tradable.removeSymbolFromUpdates(updateClientId, symbol);
+    found = findSymbolForUpdates(updateClientId);
+    assert.ok(found === 0, "Symbol successfully removed from updates");
+
+    function findSymbolForUpdates(cliendId) {
+        var found = 0;
+        for (var i = 0; i < tradable.instrumentKeysForAccountUpdates.length; i++) {
+            if (tradable.instrumentKeysForAccountUpdates[i] === symbol+':'+cliendId)
+                found++;
+        }
+        return found;
+    }
+});
+
 QUnit.test("Setting Account Frequency Millis", function ( assert ) {
     assert.throws(function () {
         tradable.setAccountUpdateFrequencyMillis("invalidMillis");
@@ -344,6 +435,31 @@ QUnit.test("Open OAuth", function ( assert ) {
     assert.throws(function () {
         tradable.openOAuthPage("Wrong type", false);
     }, "Invalid OAuth endpoint type breaks");
+});
+
+QUnit.test("Test hash fragment processing", function ( assert ) {
+    var accessToken = 'myToken';
+    var endPoint = 'myUrl';
+    var expiresIn = 'myExpiresIn';
+
+    var hashFragment = "#access_token="+accessToken+"&endpointURL="+endPoint+"&expires_in="+expiresIn;
+    var token = tradable.testhook.getTokenValuesFromHashFragment(hashFragment);
+
+    assert.ok(token.accessToken === accessToken, "accessToken correctly extracted");
+    assert.ok(token.endPoint === endPoint, "endPoint correctly extracted");
+    assert.ok(token.expiresIn === expiresIn, "expiresIn correctly extracted");
+});
+
+QUnit.test( "Test getDailyClose", function( assert ) {
+    var done = assert.async();
+    var symbols = ["EURUSD", "USDCAD"];
+    tradable.getLastDailyClose(symbols).then(function (data) {
+        assert.ok(data.length === symbols.length, "Received daily close for all symbols");
+        assert.ok(typeof data[0].close === "number", "Received close price");
+        assert.ok(typeof data[0].timestamp === "number", "Timestamp received");
+        assert.ok(typeof data[0].symbol === "string", "Received symbol");
+        done();
+    });
 });
 
 QUnit.test( "Start and stop candle updates", function( assert ) {
@@ -371,6 +487,10 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
 });
 
 QUnit.test("Sign Out", function ( assert ) {
+    signOut(assert);
+});
+
+function signOut(assert) {
     tradable.signOut();
     assert.ok(tradable.tradingEnabled === false, "Trading disabled");
 
@@ -378,7 +498,7 @@ QUnit.test("Sign Out", function ( assert ) {
     assert.ok(!localStorage.getItem('authEndpoint'+tradable.app_id), "authEndpoint removed from storage");
     assert.ok(!localStorage.getItem('tradingEnabled'+tradable.app_id), "tradingEnabled removed from storage");
     assert.ok(!localStorage.getItem('expirationTimeUTC'+tradable.app_id), "expirationTimeUTC removed from storage");
-});
+}
 
 function findPrices(instrumentId, prices) {
     var priceFound = false;
