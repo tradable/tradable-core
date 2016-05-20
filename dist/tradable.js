@@ -2017,19 +2017,25 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             getInstruments().then(function(acctInstruments) {
                 cacheInstruments(acctInstruments);
                 deferred.resolve(tradable.availableInstruments);
+            }, function (err) {
+                deferred.reject(err);
             });
         } else {
-            var deferreds = [];
             idsToRequest = [];
 
-            deferreds.push(tradable.searchInstruments("EUR").then(gatherForexInstrumentIds));
-            deferreds.push(tradable.searchInstruments("AUD").then(gatherForexInstrumentIds));
-            deferreds.push(tradable.searchInstruments("USD").then(gatherForexInstrumentIds));
-
-            $.when.apply(null, deferreds).done(function () {
-                tradable.getPrices(idsToRequest).then(function() {
-                    deferred.resolve(tradable.availableInstruments);
-                });
+            tradable.searchInstruments("EUR").then(function (instrumentResults) {
+                gatherForexInstrumentIds(instrumentResults);
+                return tradable.searchInstruments("AUD");
+            }).then(function (instrumentResults) {
+                gatherForexInstrumentIds(instrumentResults);
+                return tradable.searchInstruments("USD");
+            }).then(function (instrumentResults) {
+                gatherForexInstrumentIds(instrumentResults);
+                return tradable.getPrices(idsToRequest);
+            }).then(function () {
+                deferred.resolve(tradable.availableInstruments);
+            }, function (error) {
+                deferred.reject(error);
             });
         }
 

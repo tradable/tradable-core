@@ -145,7 +145,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
 
 QUnit.test( "Authenticate with test account", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "tradablecore@tradable.com", "tradable", 1);
+    authenticateWithCredentials(done, assert, "sadfasdgadfghfdhfsdhsdfg@tradable.com", "tradable", 1);
 });
 
 QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id", function( assert ) {
@@ -553,10 +553,6 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     });
 });
 
-QUnit.test("Sign Out", function ( assert ) {
-    signOut(assert);
-});
-
 QUnit.test( "Authenticate with City Index test account", function( assert ) {
     var done = assert.async();
     authenticateWithCredentials(done, assert, "DM845045", "tradable", 12);
@@ -578,6 +574,10 @@ QUnit.test( "Exclude Account and validate token", function( assert ) {
     }
     assert.ok(!found, "Account excluded");
     tradable.testhook.validateToken();
+});
+
+QUnit.test("Sign Out", function ( assert ) {
+    signOut(assert);
 });
 
 function authenticateWithCredentials(done, assert, login, pass, brokerId) {
