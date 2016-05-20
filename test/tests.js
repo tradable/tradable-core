@@ -94,6 +94,17 @@ QUnit.test( "Initialize with token", function( assert ) {
   	});
 });
 
+QUnit.test( "Refresh token", function( assert ) {
+    var done = assert.async();
+    tradable.refreshAuthentication(apiToken.apiRefreshTokenValue).then(function () {
+        assert.ok(true, "Token refreshed");
+        done();
+    }, function(error) {
+        QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
+    });
+});
+
 QUnit.test( "Search and Get Instruments", function( assert ) {
     var done = assert.async();
     searchAndGetIntruments(assert, done);
@@ -570,7 +581,6 @@ QUnit.test( "Exclude Account and validate token", function( assert ) {
 });
 
 function authenticateWithCredentials(done, assert, login, pass, brokerId) {
-    signOut(assert);
     tradable.authenticateWithCredentials(brokerId, login, pass).then(function () {
         assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
         assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );

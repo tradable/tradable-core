@@ -910,6 +910,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.makeAccountRequest("POST", accountId, "instruments/", instrumentIdsObj).then(function(instruments) {
                     cacheInstruments(instruments.instruments);
                     instrumentDeferred.resolve(tradable.availableInstruments);
+                }, function (error) {
+                    deferred.reject(error);
                 });
             } else {
                 tradable.getOrResolveInstrumentsForAccountId(accountId, instrumentDeferred, deferred);
