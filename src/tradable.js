@@ -1764,19 +1764,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.lastSnapshot = undefined;
 
             var accountQty = tradable.accounts.length;
-            if(accountQty > 0) {
-                tradable.initializeWithToken(access_token, end_point, expires_in).then(function() {
-                    return setSelectedAccountAndNotify(set_latest_account, accountQty);
-                }).then(function() {
-                    deferred.resolve();
-                }, function(error) {
-                    deferred.reject(error);
-                });
-            } else {
-                setTradingEnabled(false);
-                notifyReadyCallbacks();
+            tradable.initializeWithToken(access_token, end_point, expires_in).then(function() {
+                return setSelectedAccountAndNotify(set_latest_account, accountQty);
+            }).then(function() {
                 deferred.resolve();
-            }
+            }, function(error) {
+                deferred.reject(error);
+            });
 
             return deferred;
         }
@@ -2131,20 +2125,23 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             accountId = tradable.accounts[accIdxToSelect].uniqueId;
         } else if(!!savedAccId && !!tradable.accountMap[savedAccId]) {
             accountId = savedAccId;
-        } else {
+        } else if(accIdxToSelect >= 0) {
             accountId = tradable.accounts[accIdxToSelect].uniqueId;
         }
         resetUpdates();
-        tradable.setSelectedAccount(accountId, function() {
-            if(!tradable.tradingEnabled) {
-                setTradingEnabled(true);
-                notifyReadyCallbacks();
-            }
-            deferred.resolve();
-        }, function(error) {
-            deferred.reject(error);
-        });
-
+        if(!!accountId) {
+            tradable.setSelectedAccount(accountId, function() {
+                if(!tradable.tradingEnabled) {
+                    setTradingEnabled(true);
+                    notifyReadyCallbacks();
+                }
+                deferred.resolve();
+            }, function(error) {
+                deferred.reject(error);
+            });
+        } else {
+            deferred.reject();
+        }
         return deferred;
     }
 
