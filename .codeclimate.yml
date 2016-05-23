@@ -7,6 +7,9 @@ engines:
   eslint:
     enabled: true
     # ... CONFIG CONTENT ...
+    exclude_fingerprints:
+    - 906d5a2c7bde3aaeb310c573456d7b40
+    - 8f2815829c11f12640af5bd3d0af413b
     checks:
       complexity:
         enabled: false

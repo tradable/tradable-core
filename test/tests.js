@@ -119,7 +119,7 @@ function searchAndGetIntruments(assert, done) {
         trEmbJQ(instrumentResults).each(function (idx, res) {
             insIds.push(res.instrumentId);
         });
-        assert.ok(instrumentResults.length === insIds.length, "All results have IDs");
+        assert.ok(instrumentResults.length === insIds.length, "All results have IDs ");
         return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
     }).then(function (instruments) {
         assert.ok(instruments.instruments.length > 0, " Got " + instruments.instruments.length + "Instruments ");
@@ -136,6 +136,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
     tradable.enableWithAccessToken(apiToken.apiTokenValue, apiToken.apiEndpoint, apiToken.expires).then(function() {
       assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
       assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
+      assert.ok( !!tradable.getAccountById(tradable.selectedAccount.uniqueId) , "getAccountById" );
       done();
     }, function(error) {
       QUnit.pushFailure( JSON.stringify(error.responseJSON) );
@@ -146,6 +147,20 @@ QUnit.test( "Enable trading with token", function( assert ) {
 QUnit.test( "Authenticate with test account", function( assert ) {
     var done = assert.async();
     authenticateWithCredentials(done, assert, "sadfasdgadfghfdhfsdhsdfg@tradable.com", "tradable", 1);
+});
+
+QUnit.test( "AppInfo and Brokers", function( assert ) {
+    var done = assert.async();
+    tradable.getAppInfo().then(function (appInfo) {
+        assert.ok(!!appInfo && !!appInfo.name, "getAppInfo");
+        return tradable.getBrokers();
+    }).then(function (brokers) {
+        assert.ok(!!brokers && !!brokers.length, "getBrokers");
+        done();
+    }, function (error) {
+        QUnit.pushFailure( JSON.stringify(error.responseJSON) );
+        done();
+    });
 });
 
 QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id", function( assert ) {
@@ -225,17 +240,29 @@ QUnit.test( "Get Prices", function( assert ) {
      });
 });
 
-QUnit.test( "Place, Get and Modify order", function( assert ) {
+QUnit.test( "Place, Get and Modify LIMIT order", function( assert ) {
     var done = assert.async();
 
-    var amt = 1000;
     var price = 1.05;
     var newPrice = 1.04;
-    var side = "BUY";
-    var insId = "EURUSD";
-    var type = "LIMIT";
+
+    placeOrder("LIMIT", 1000, price, "BUY", "EURUSD", newPrice, assert, done);
+});
+
+QUnit.test( "Place, Get and Modify STOP order", function( assert ) {
+    var done = assert.async();
+
+    var price = 1.20;
+    var newPrice = 1.25;
+
+    placeOrder("STOP", 1000, price, "BUY", "EURUSD", newPrice, assert, done);
+});
+
+function placeOrder(type, amt, price, side, insId, newPrice, assert, done) {
     var id;
-    tradable.placeOrder(amt, price, side, insId, type).then(function(order){
+    var deferred = (type === "LIMIT") ? tradable.placeLimitOrder(amt, price, side, insId) :
+                                        tradable.placeStopOrder(amt, price, side, insId);
+    deferred.then(function(order){
         assert.ok(order.side === side, "Order placed with side");
         assert.ok(order.amount === amt, "Order placed with amount");
         assert.ok(order.price === price, "Order placed with price");
@@ -251,16 +278,40 @@ QUnit.test( "Place, Get and Modify order", function( assert ) {
         id = order.id;
         return tradable.modifyOrderPrice(id, newPrice);
     }).then(function(){
-       return tradable.getOrderById(id);
+        return tradable.getOrderById(id);
     }).then(function(order) {
-       assert.ok(order.price === newPrice, "Order modified with price");
+        assert.ok(order.price === newPrice, "Order modified with price");
 
-       return tradable.cancelOrder(id);
+        return tradable.cancelOrder(id);
     }).then(function() {
         assert.ok(true, "Order cancelled successfully");
         done();
     }, function(error) {
         QUnit.pushFailure( JSON.stringify(error) );
+        done();
+    });
+}
+
+QUnit.test( "Place wrong order promise and get error", function( assert ) {
+    var done = assert.async();
+
+    tradable.placeMarketOrder(0, "BUY", "EURUSD").then(function(order){
+        QUnit.pushFailure( "0 amount market order should have failed" );
+        done();
+    }, function(error) {
+        assert.ok(error, "Market order failed");
+        done();
+    });
+});
+
+QUnit.test( "Place wrong order with reject callback and get error", function( assert ) {
+    var done = assert.async();
+
+    tradable.placeMarketOrder(0, "BUY", "EURUSD", function(order){
+        QUnit.pushFailure( "0 amount market order should have failed" );
+        done();
+    }, function(error) {
+        assert.ok(error, "Market order failed");
         done();
     });
 });
@@ -353,7 +404,7 @@ QUnit.test( "Place Order with protections", function( assert ) {
     var side = "SELL";
     var amt = 1000;
 
-    tradable.placeOrderWithProtectionsForAccount(tradable.selectedAccount.uniqueId, amt, 0, side, instrumentId, "MARKET", 0.0025, 0.0025).then(function (order) {
+    tradable.placeOrderWithProtections (amt, 0, side, instrumentId, "MARKET", 0.0025, 0.0025).then(function (order) {
         assert.ok(!!order, 'Order with id: ' + order.id + ' received');
         assert.ok(order.side === side, "Position with side");
         assert.ok(order.amount === amt, "Position with amount");
@@ -365,12 +416,12 @@ QUnit.test( "Place Order with protections", function( assert ) {
         assert.ok(pos.stoploss, "Position with stoploss");
         assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
 
-        return tradable.cancelTakeProfitForAccount(tradable.selectedAccount.uniqueId, pos.id);
+        return tradable.cancelTakeProfit(pos.id);
     }).then(function(){
         return tradable.getPositionById(pos.id);
     }).then(function(position){
         assert.ok(!!position && !position.takeprofit, "cancelTakeProfitForAccount succeeded");
-        return tradable.cancelStopLossForAccount(tradable.selectedAccount.uniqueId, pos.id);
+        return tradable.cancelStopLoss(pos.id);
     }).then(function(){
         return tradable.getPositionById(pos.id);
     }).then(function(position){

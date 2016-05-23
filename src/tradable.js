@@ -314,7 +314,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 throw "It is not allowed to include a colon ':' in the updateClientId";
             }
             var instrumentKey = instrumentId + ":" + updateClientId;
-            if($.inArray(instrumentKey, tradable.instrumentKeysForAccountUpdates) === -1) {//$.inArray(instrumentId, tradable.availableSymbols) !== -1
+            if($.inArray(instrumentKey, tradable.instrumentKeysForAccountUpdates) === -1) {
                 tradable.instrumentKeysForAccountUpdates.push(instrumentKey);
             }
         },
@@ -1674,17 +1674,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return resolveDeferred(deferred, resolve, reject);
             }
         },
-        makeCandleRequest : function (method, symbolsArray, resolve, reject, postObject) {
-            var symbolsObj = {symbols: symbolsArray};
+        makeCandleRequest : function (method, insIdsArray, resolve, reject, postObject) {
+            var postObj = {'symbols': insIdsArray};
             if(postObject) {
-                symbolsObj = postObject;
+                postObj = postObject;
             }
             var ajaxPromise = $.ajax({
                 type: "POST",
                 crossDomain: true,
                 url: "https://candles-api.tradable.com/" + method,
                 contentType: "application/json; charset=utf-8",
-                data: JSON.stringify(symbolsObj),
+                data: JSON.stringify(postObj),
                 dataType: 'json'
             });
 
@@ -2135,7 +2135,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             accountId = tradable.accounts[accIdxToSelect].uniqueId;
         }
         resetUpdates();
-        if(!!accountId) {
+        if(accountId) {
             tradable.setSelectedAccount(accountId, function() {
                 if(!tradable.tradingEnabled) {
                     setTradingEnabled(true);
