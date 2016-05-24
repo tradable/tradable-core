@@ -117,9 +117,10 @@ function searchAndGetIntruments(assert, done) {
         assert.ok(Object.keys(instrumentResults[0]).length === 6, "Received instrument results with 6 fields");
         var insIds = [];
         trEmbJQ(instrumentResults).each(function (idx, res) {
-            insIds.push(res.instrumentId);
+            if(insIds.length < 21) {
+                insIds.push(res.instrumentId);
+            }
         });
-        assert.ok(instrumentResults.length === insIds.length, "All results have IDs ");
         return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
     }).then(function (instruments) {
         assert.ok(instruments.instruments.length > 0, " Got " + instruments.instruments.length + "Instruments ");
@@ -498,6 +499,7 @@ QUnit.test("Test onAccountUpdated", function ( assert ) {
     assert.throws(function () {
         tradable.onAccountUpdated(null);
     }, "Invalid callback breaks");
+    tradable.setAccountUpdateFrequencyMillis(100000000);
 });
 
 QUnit.test("Test addSymboToUpdates removeSymbolFromUpdates", function ( assert ) {
