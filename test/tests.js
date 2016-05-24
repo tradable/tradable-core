@@ -606,7 +606,7 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
 
 QUnit.test( "Authenticate with City Index test account", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "DM845045", "tradable", 12);
+    authenticateWithCredentials(done, assert, "DM806405", "trade123", 12);
 });
 
 QUnit.test( "Search and Get Instruments with City Index test account", function( assert ) {

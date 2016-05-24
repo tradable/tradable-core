@@ -506,7 +506,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-begin_Instrument_object-end_
          */
         getInstrumentFromId : function(instrumentId) {
-            if(!instrumentId) {
+            if(!instrumentId || !tradable.tradingEnabled) {
                 return null;
             }
             if(isInstrumentCached(instrumentId)) {
@@ -1675,7 +1675,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
         },
         makeCandleRequest : function (method, insIdsArray, resolve, reject, postObject) {
-            var postObj = {'symbols': insIdsArray};
+            var postObj = {'instrumentIds': insIdsArray};
+            if(method === "getQuotes") {
+                postObj = {'symbols': insIdsArray};
+            }
             if(postObject) {
                 postObj = postObject;
             }
@@ -1721,13 +1724,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         /**
          * A list of close prices for the previous day for certain symbols (on a specific account)
-         * @param      {Array} symbols Array of symbols for the wanted daily close prices
+         * @param      {Array} instrumentIds Array of instrument Ids for the wanted daily close prices
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        getLastDailyClose : function (symbols, resolve, reject) {
-            return tradable.makeCandleRequest("dailyClose", symbols, resolve, reject);
+        getLastDailyClose : function (instrumentIds, resolve, reject) {
+            return tradable.makeCandleRequest("dailyClose", instrumentIds, resolve, reject);
         },
         /**
          * This method will initialize tradable core with the minimum required in order to be able to use the API calls that do not require a selected account. Beware! If you use this method instead of 'enableWithAccessToken', there will not be a selectedAccount and the instruments will not be cached. The on/off listeners will not work either. I.e. you will only be able to use methods that require an 'accountId'
