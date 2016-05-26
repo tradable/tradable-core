@@ -119,9 +119,53 @@ And as always you can turn off the updates:
 tradable.off("myAccountUpdateListener", "accountUpdated");
 ```
 
+##### Additional events
+
+In addition to the mentioned events, these are the rest of the events that should be handled by the UI to deliver a nice experience:
+
+###### Token expiration
+
+This listener gets called when the token expires. Before it's called ``tradable.tradingEnabled`` will be set to ``false`` and going through the authentication process will be required.
+
+```javascript
+tradable.on("myTokenExpiredListener", "tokenExpired", function() {});
+```
+
+###### Re-login
+
+Sometimes, when the user connects an account from multiple clients at a time, a re-login might be required to continue trading. When this event is fired, ``tradable.tradingEnabled`` will be set to ``false`` and the UI should ask the user whether a re-login is desired or not. If a re-login is desired, either ``tradable.reLogin()`` or ``tradable.reLoginForAccount(accountId)`` should be called to resume trading.
+
+```javascript
+tradable.on("myReloginListener", "reLoginRequired", function() {});
+```
+
+###### Errors
+
+Gets called when a general error occurs, for example an account initialization error due to a password change. 
+
+```javascript
+tradable.on("myErrorListener", "error", function(error) {});
+```
+
+###### Account switch
+
+Gets notified every time the selectedAccount is changed (through the setSelectedAccount method). This is only applicable for apps that support multi-accounts.
+
+```javascript
+tradable.on("myAccountSwitchListener", "accountSwitch", function() {});
+```
+
+###### Token about to expire
+
+Gets called back every 5 minutes when the remaining token time is less than 30 minutes.
+
+```javascript
+tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMillis) {});
+```
+
 ##### More
 
-You can read about the rest of the updates and API calls in our [documentation](https://tradable.github.io/js/docs/).
+You can read the full API specification in our [documentation](https://tradable.github.io/js/docs/).
 
 ### Light integration
 

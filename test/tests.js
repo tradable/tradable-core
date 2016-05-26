@@ -453,12 +453,13 @@ QUnit.test("Test On Off listener", function ( assert ) {
     addRemoveListener("test", "embedReady");
     addRemoveListener("test", "accountUpdated");
     addRemoveListener("test", "tokenWillExpire");
+    addRemoveListener("test", "reLoginRequired");
 
     function addRemoveListener(namespace, listener) {
         // Add listener
         var callback = function () {};
         tradable.on(namespace, listener, callback);
-        assert.ok(tradable.testhook.callbackHolder[listener][namespace] === callback, "Callback was saved");
+        assert.ok(tradable.testhook.callbackHolder[listener][namespace] === callback, "Callback was saved for " + listener);
 
         assert.throws(function () {
             tradable.on(namespace, listener, function () {});
@@ -466,7 +467,7 @@ QUnit.test("Test On Off listener", function ( assert ) {
 
         // Remove listener
         tradable.off(namespace, listener);
-        assert.ok(!tradable.testhook.callbackHolder[listener][namespace], "Callback is successfully turned off");
+        assert.ok(!tradable.testhook.callbackHolder[listener][namespace], "Callback is successfully turned off for " + listener);
     }
 });
 

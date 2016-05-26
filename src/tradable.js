@@ -30,7 +30,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var oauthEndpoint = formOAuthEndpoint(redirectUrl);
     var tokenObj = getTokenFromStorage();
 
-    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"];
+    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"];
     var callbackHolder = {};
     var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
         tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
@@ -173,7 +173,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Add an event listener with an specific name that can be turned off calling 'off'.
          * @param      {String} namespace    A unique name that will identify your listener and that you will have to use to turn the listener off 
-         * @param      {String} eventName   The available events are "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "error"
+         * @param      {String} eventName   The available events are "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"
          * @param      {Function} callback  Event listener callback function
          * @example
          * tradable.on("yourCustomNamespace", "accountUpdated", function(snapshot) {
@@ -427,7 +427,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
-                            notifyTokenExpired();
+                            if(jqXHR.responseJSON.code === 1005) {
+                                notifyReloginRequiredCallbacks();
+                            } else {
+                                notifyTokenExpired();
+                            }
                         }
                         notifyErrorCallbacks(jqXHR.responseJSON);
                     }
@@ -1759,6 +1763,30 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var deferred = tradable.getAccounts();
             return resolveDeferred(deferred, resolve, reject);
         },
+        /**
+         * Sometimes when the user connects an account from multiple clients at a time, a re-login might be required to continue trading. To solve this issue, you need to listen to the "reLoginRequired" event and call "reLogin()" for the selected account once the user is ready to re-enable trading.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        reLogin : function (resolve, reject) {
+            return tradable.reLoginForAccount(tradable.selectedAccount.uniqueId, resolve, reject);
+        },
+        /**
+         * Sometimes when the user connects an account from multiple clients at a time, a re-login might be required to continue trading. To solve this issue, you need to listen to the "reLoginRequired" event and call "reLoginForAccount(accountId)" once the user is ready to re-enable trading.
+         * @param      {String} accountId    Account Id that needs to be re-logged in
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         */
+        reLoginForAccount : function (accountId, resolve, reject) {
+            var empty = {};
+            var reloginPromise = tradable.makeAccountRequest("POST", accountId, "reLogin/", empty).then(function () {
+                setTradingEnabled(true);
+            });
+
+            return resolveDeferred(reloginPromise, resolve, reject);
+        },
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
             var deferred = new $.Deferred();
 
@@ -2118,7 +2146,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             },
             function() {
                 setTradingEnabled(false);
-                notifyReadyCallbacks();
             }
         );
     }
@@ -2142,7 +2169,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.setSelectedAccount(accountId, function() {
                 if(!tradable.tradingEnabled) {
                     setTradingEnabled(true);
-                    notifyReadyCallbacks();
                 }
                 deferred.resolve();
             }, function(error) {
@@ -2159,6 +2185,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         if(isLocalStorageSupported()) {
             localStorage.setItem("tradingEnabled:"+appId, tradable.tradingEnabled);
         }
+        notifyReadyCallbacks();
     }
 
     // Notify events
@@ -2225,15 +2252,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function notifyTokenExpired() {
-        tradable.tradingEnabled = false;
-        if(isLocalStorageSupported()) {
-            localStorage.setItem("tradingEnabled:"+appId, false);
-        }
+        setTradingEnabled(false);
         $(tokenExpirationCallbacks).each(function(index, callback) {
             callback();
         });
         notifyNamespaceCallbacks("tokenExpired");
-        notifyReadyCallbacks();
     }
 
     function notifyErrorCallbacks(error) {
@@ -2248,6 +2271,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             callback();
         });
         notifyNamespaceCallbacks("accountSwitch");
+    }
+
+    function notifyReloginRequiredCallbacks() {
+        setTradingEnabled(false);
+        notifyNamespaceCallbacks("reLoginRequired");
     }
 
     function notifyNamespaceCallbacks(eventName, data) {
