@@ -123,7 +123,7 @@ function searchAndGetIntruments(assert, done) {
         });
         return tradable.getInstrumentsFromIdsForAccount(accountId, insIds);
     }).then(function (instruments) {
-        assert.ok(instruments.instruments.length > 0, " Got " + instruments.instruments.length + "Instruments ");
+        assert.ok(instruments.instruments.length > 0, " Got " + instruments.instruments.length + " Instruments ");
         assert.ok(Object.keys(instruments.instruments[0]).length > 6, "Received instruments");
         done();
     }, function (error) {
