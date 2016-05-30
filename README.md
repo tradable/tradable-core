@@ -92,9 +92,32 @@ var instrument = tradable.getInstrumentFromId("EURUSD"); //synchronous
 
 *Note! Some brokers do not provide the full instrument list. In that case, instruments are gradually cached by Tradable Core for the requested prices (before prices are retrieved). All instruments related to to the open positions and pending orders are cached since the beginning.*
 
-##### Account updates and Prices
+##### Trading
 
-In order to keep the UI updated with the changes that happen on the account, we provide a a listener that will request the account snapshot every certain time (700 milliseconds by default) and notify with it. The account snapshot is an object that contains everything you need to know about the user's portfolio: Metrics, Positions, Orders and Prices.
+Placing trades is really simple, let's say that you want to place a ``Market`` order to ``BUY 10.000 EURUSD``. This is how it's done:
+```javascript
+tradable.placeMarketOrder(10000, "BUY", "EURUSD").then(function(order) {
+     // Success
+}, function(jqXHR) {
+     // Error
+});
+```
+
+Tradable Core provides a bunch of helper methods to place orders, here are some examples:
+
+- Place a Limit order: [tradable.placeLimitOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeLimitOrder)
+- Place a Stop order: [tradable.placeStopOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeStopOrder)
+- Place an order with protections: [tradable.placeOrderWithProtections(amount, price, side, instrumentId, type, tpDistance, slDistance)](https://tradable.github.io/js/docs/index.html#tradable.placeOrderWithProtections)
+- Cancel an order: [tradable.cancelOrder(orderId)](https://tradable.github.io/js/docs/index.html#tradable.cancelOrder)
+- [Many more...](https://tradable.github.io/js/docs/)
+
+Note that not all accounts support all order types, the account object (``tradable.selectedAccount``) provides information about what is supported: ``[account.takeProfitSupported, account.stopLossSupported, account.marketOrdersSupport, account.limitOrdersSupport, account.stopOrdersSupport]``
+
+##### Portfolio: Account updates and Prices
+
+In order to keep the UI updated with the changes that happen on the account, we provide a a listener that will request the account snapshot every certain time (700 milliseconds by default) and notify with it. The account snapshot is an object that contains everything you need to know about the user's portfolio: Metrics (``snapshot.metrics``), Positions (``snapshot.positions``), Orders (``snapshot.orders``) and Prices (``snapshot.prices``).
+
+Here's how you subscribe to it:
 ```javascript
 tradable.on("myAccountUpdateListener", "accountUpdated", function(snapshot) {
      console.log("New snapshot received: " + JSON.stringify(snapshot));
