@@ -427,7 +427,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
-                            if(jqXHR.responseJSON.code === 1005) {
+                            if(tradable.isReLoginRequired(jqXHR)) {
                                 notifyReloginRequiredCallbacks();
                             } else {
                                 notifyTokenExpired();
@@ -463,21 +463,22 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     }
                 },
                 function(err) {
-                    if(err.status === 502 || err.status === 500 || err.status === 403) {
-                        tradable.excludeCurrentAccount();
-                        if(tradable.accounts.length > 0) {
-                            validateToken();
-                        } else {
-                            tradable.signOut();
-                        }
-                    }
-                    if(reject) {
-                        reject(err);
+                    if(tradable.isReLoginRequired(err)) {
+                        tradable.reLogin().then(function () {
+                            tradable.setSelectedAccount(accountId);
+                        }, function () {
+                            excludeAndValidate(reject, err);
+                        });
+                    } else if(err.status === 502 || err.status === 500 || err.status === 403) {
+                        excludeAndValidate(reject, err);
                     }
                 });
             } else {
                 console.error("Can't set account id to: " + accountId);
             }
+        },
+        isReLoginRequired : function (err) {
+            return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === 1005);
         },
         excludeCurrentAccount : function() {
             var accountId = tradable.selectedAccountId;
@@ -2134,6 +2135,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function resetUpdates() {
         if(tradable.instrumentKeysForAccountUpdates.length) {
             tradable.instrumentKeysForAccountUpdates.splice(0, tradable.instrumentKeysForAccountUpdates.length);
+        }
+    }
+
+    function excludeAndValidate(reject, err) {
+        tradable.excludeCurrentAccount();
+        if(tradable.accounts.length > 0) {
+            validateToken();
+        } else {
+            tradable.signOut();
+        }
+        if(reject) {
+            reject(err);
         }
     }
 

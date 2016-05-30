@@ -150,9 +150,14 @@ QUnit.test( "Authenticate with test account", function( assert ) {
     authenticateWithCredentials(done, assert, "sadfasdgadfghfdhfsdhsdfg@tradable.com", "tradable", 1);
 });
 
-QUnit.test( "AppInfo and Brokers", function( assert ) {
+QUnit.test( "User, AppInfo and Brokers", function( assert ) {
     var done = assert.async();
-    tradable.getAppInfo().then(function (appInfo) {
+    tradable.getUser().then(function () {
+        QUnit.pushFailure( "User should have failed" );
+    }, function () {
+        assert.ok(true, "getUser");
+        return tradable.getAppInfo();
+    }).then(function (appInfo) {
         assert.ok(!!appInfo && !!appInfo.name, "getAppInfo");
         return tradable.getBrokers();
     }).then(function (brokers) {
@@ -628,6 +633,15 @@ QUnit.test( "Exclude Account and validate token", function( assert ) {
     }
     assert.ok(!found, "Account excluded");
     tradable.testhook.validateToken();
+});
+
+QUnit.test("isReLoginRequired", function ( assert ) {
+    assert.ok(!tradable.isReLoginRequired(undefined), "isReLoginRequired: undefined");
+    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, }}), "isReLoginRequired no code");
+    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'code': 1005}}), "isReLoginRequired no status");
+    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, 'code': 105}}), "isReLoginRequired wrong code");
+    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 43, 'code': 1005}}), "isReLoginRequired wrong status");
+    assert.ok(tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, 'code': 1005}}), "isReLoginRequired");
 });
 
 QUnit.test("Sign Out", function ( assert ) {
