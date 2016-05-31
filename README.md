@@ -94,7 +94,7 @@ var instrument = tradable.getInstrumentFromId("EURUSD"); //synchronous
 
 ##### Trading
 
-Placing trades is really simple, let's say that you want to place a ``Market`` order to ``BUY 10.000 EURUSD``. This is how it's done:
+Placing trades is really simple, let's say that you want to place a ``MARKET`` order to ``BUY 10.000 EURUSD``. This is how it's done:
 ```javascript
 tradable.placeMarketOrder(10000, "BUY", "EURUSD").then(function(order) {
      // Success
@@ -103,12 +103,12 @@ tradable.placeMarketOrder(10000, "BUY", "EURUSD").then(function(order) {
 });
 ```
 
-Tradable Core provides a bunch of helper methods to place orders, here are some examples:
+Tradable Core provides a bunch of additional helper methods to place orders, here are some examples:
 
-- Place a Limit order: [tradable.placeLimitOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeLimitOrder)
-- Place a Stop order: [tradable.placeStopOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeStopOrder)
-- Place an order with protections: [tradable.placeOrderWithProtections(amount, price, side, instrumentId, type, tpDistance, slDistance)](https://tradable.github.io/js/docs/index.html#tradable.placeOrderWithProtections)
-- Cancel an order: [tradable.cancelOrder(orderId)](https://tradable.github.io/js/docs/index.html#tradable.cancelOrder)
+- Limit order: [.placeLimitOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeLimitOrder)
+- Stop order: [.placeStopOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeStopOrder)
+- Order with protections: [.placeOrderWithProtections(amount, price, side, instrumentId, type, tpDistance, slDistance)](https://tradable.github.io/js/docs/index.html#tradable.placeOrderWithProtections)
+- Cancel order: [tradable.cancelOrder(orderId)](https://tradable.github.io/js/docs/index.html#tradable.cancelOrder)
 - [Many more...](https://tradable.github.io/js/docs/)
 
 Note that not all accounts support all order types, the account object (``tradable.selectedAccount``) provides information about what is supported: ``[account.takeProfitSupported, account.stopLossSupported, account.marketOrdersSupport, account.limitOrdersSupport, account.stopOrdersSupport]``
