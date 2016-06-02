@@ -427,7 +427,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
-                            if(tradable.isReLoginRequired(jqXHR)) {
+                            if(!tradable.initializingAccount && tradable.isReLoginRequired(jqXHR)) {
                                 notifyReloginRequiredCallbacks();
                             } else {
                                 notifyTokenExpired();
@@ -448,12 +448,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject Error callback for the API call
          */
+        initializingAccount : false,
         setSelectedAccount : function (accountId, resolve, reject){
             if(tradable.accountMap[accountId]) {
                 tradable.lastSnapshot = undefined;
                 tradable.selectedAccount = tradable.accountMap[accountId];
                 tradable.selectedAccountId = accountId;
                 console.log('New accountId is set');
+                tradable.initializingAccount = true;
                 return initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
@@ -461,6 +463,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     if(resolve) {
                         resolve();
                     }
+                    tradable.initializingAccount = false;
                 },
                 function(err) {
                     if(tradable.isReLoginRequired(err)) {
@@ -472,6 +475,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     } else if(err.status === 502 || err.status === 500 || err.status === 403) {
                         excludeAndValidate(reject, err);
                     }
+                    tradable.initializingAccount = false;
                 });
             } else {
                 console.error("Can't set account id to: " + accountId);

@@ -8,6 +8,10 @@
   },
   "author": "Oier Izulain",
   "license": "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/tradable/tradable-core"
+  },
   "devDependencies": {
     "fs": "0.0.2",
     "gulp": "^3.9.0",
