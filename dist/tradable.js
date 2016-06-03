@@ -547,6 +547,61 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
+         * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
+         * @param      {String} instrumentId The instrument id to calculate the position size
+         * @param      {number}   risk Percentage of account equity willing to risk or quantity willing to risk
+         * @param      {Boolean}   riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
+         * @param      {number}   stopLossInPips Stop loss value in pips/points
+         * @param      {number}   pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
+         * @param      {number}   equity(optional) The account equity, if not sent it will be taken from the last received snapshot
+         * @return      {number} Calculated position size
+         * @example
+         * var positionSize = tradable.calculatePositionSize("EURUSD", 10, false, 25, 0.0001);
+         */
+        calculatePositionSize : function(instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
+            return tradable.calculatePositionSizeForAccount(tradable.selectedAccount.uniqueId, instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity);
+        },
+        /**
+         * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
+         * @param      {String}   accountId Account uniqueId
+         * @param      {String} instrumentId The instrument id to calculate the position size
+         * @param      {number}   risk Percentage of account equity willing to risk or quantity willing to risk
+         * @param      {Boolean}   riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
+         * @param      {number}   stopLossInPips Stop loss value in pips/points
+         * @param      {number}   pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
+         * @param      {number}   equity(optional) The account equity, if not sent it will be taken from the last received snapshot
+         * @return      {number} Calculated position size
+         * @example
+         * var actId = tradable.selectedAccount.uniqueId;
+         * var positionSize = tradable.calculatePositionSizeForAccount(actId, "EURUSD", 10, false, 25, 0.0001);
+         */
+        calculatePositionSizeForAccount : function(accountId, instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
+            // Formula: Position size = ((accountSize x risk %) / stopLossInPips)/ pip value per standard lot
+            var curEquity = equity;
+            if(!curEquity && tradable.lastSnapshot) {
+                curEquity = tradable.lastSnapshot.metrics.equity;
+            } else if(!equity) {
+                throw "Please provide the equity or subscribe to account updates before calling calculatePositionSizeForAccount.";
+            }
+
+            if(!riskIsMoney && risk > 100) {
+                throw "Please provide a valid risk value: riskIsMoney is false but the provided risk is not a percentage..";
+            }
+
+            var moneyInRisk = riskIsMoney ? risk : curEquity * risk / 100;
+            var positionSize = (moneyInRisk / stopLossInPips) / pipValue;
+
+            var instrument = tradable.getInstrumentFromId(instrumentId);
+            if(instrument.multipleOfMinAmount) {
+                positionSize = Math.floor(positionSize/instrument.minAmount) * instrument.minAmount;
+            }
+
+            // Round off to two decimals
+            positionSize = Math.round(positionSize * 100) / 100;
+
+            return positionSize;
+        },
+        /**
          * Returns the account object for the given account uniqueId
          * @param      {String}   accountId Account uniqueId
          * @return      {Object} Account object for the given account uniqueId or undefined if not found

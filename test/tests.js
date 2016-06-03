@@ -508,6 +508,35 @@ QUnit.test("Test onAccountUpdated", function ( assert ) {
     tradable.setAccountUpdateFrequencyMillis(100000000);
 });
 
+QUnit.test("Test calculatePositionSize", function ( assert ) {
+    assert.throws(function () {
+        tradable.calculatePositionSize(1000, false, 25, 1.15);
+    }, "Invalid risk and riskIsMoney combination fails.");
+
+    var moneyToRisk = 15000;
+    var stopLossPips = 25;
+    var pipValue = 0.0001;
+    var posSizeMoney = tradable.calculatePositionSize("EURUSD", moneyToRisk, true, stopLossPips, pipValue, 100000);
+    var posSizePerc = tradable.calculatePositionSize("EURUSD", 15, false, stopLossPips, pipValue, 100000);
+    assert.ok(posSizeMoney === posSizePerc, "Both ways of calculatePositionSize coincide " + posSizeMoney + ", " + posSizePerc);
+
+    var result = (moneyToRisk / stopLossPips) / pipValue;
+    assert.ok(posSizeMoney === result, "Result is correct: " + posSizeMoney + ", " + result);
+
+    pipValue = 1.15;
+    posSizeMoney = tradable.calculatePositionSize("EURUSD", moneyToRisk, true, stopLossPips, pipValue);
+    var perc = moneyToRisk * 100 / tradable.lastSnapshot.metrics.equity;
+    posSizePerc = tradable.calculatePositionSize("EURUSD", perc, false, stopLossPips, pipValue);
+    assert.ok(posSizeMoney === posSizePerc, "Both ways of calculatePositionSize coincide no equity provided " + posSizeMoney + ", " + posSizePerc);
+
+    // GER30 requires multipleOfMinAcount and the position size should be multiple
+    var insId = "GER30";
+    pipValue = 0.234123;
+    posSizeMoney = tradable.calculatePositionSize(insId, moneyToRisk, true, stopLossPips, pipValue);
+    var instrument = tradable.getInstrumentFromId(insId);
+    assert.ok((posSizeMoney % instrument.minAmount) === 0, "Position size is multiple of minAmount " + posSizeMoney + ", miAmt: " + instrument.minAmount);
+});
+
 QUnit.test("Test addSymboToUpdates removeSymbolFromUpdates", function ( assert ) {
     var updateClientId = "myClientId";
     var symbol = "EURUSD";
@@ -637,7 +666,7 @@ QUnit.test( "Exclude Account and validate token", function( assert ) {
 
 QUnit.test("isReLoginRequired", function ( assert ) {
     assert.ok(!tradable.isReLoginRequired(undefined), "isReLoginRequired: undefined");
-    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, }}), "isReLoginRequired no code");
+    assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403 }}), "isReLoginRequired no code");
     assert.ok(!tradable.isReLoginRequired({'responseJSON': {'code': 1005}}), "isReLoginRequired no status");
     assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, 'code': 105}}), "isReLoginRequired wrong code");
     assert.ok(!tradable.isReLoginRequired({'responseJSON': {'httpStatus': 43, 'code': 1005}}), "isReLoginRequired wrong status");
