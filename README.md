@@ -191,7 +191,7 @@ tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMi
 Tradable Core provides a few helper methods to perform different calculations:
 
 - [calculatePipDistance](https://tradable.github.io/js/docs/index.html#tradable.calculatePipDistance): Calculates the distance in Pips/Points between prices.
-- [calculatePositionSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePipDistance): Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
+- [calculatePositionSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSize): Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
 
 ### Light integration
 
