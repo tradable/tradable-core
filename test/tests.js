@@ -145,9 +145,9 @@ QUnit.test( "Enable trading with token", function( assert ) {
     });
 });
 
-QUnit.test( "Authenticate with test account", function( assert ) {
+QUnit.test( "Authenticate with test account and an externalId", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "sadfasdgadfghfdhfsdhsdfg@tradable.com", "tradable", 1);
+    authenticateWithCredentials(done, assert, "unittestjscore@tradable.com", "tradable", 1, "myExternalUnitTestId");
 });
 
 QUnit.test( "User, AppInfo and Brokers", function( assert ) {
@@ -442,6 +442,52 @@ QUnit.test( "Place Order with protections", function( assert ) {
     });
 });
 
+function placeProtectedOrder(assert, instrumentId, checkTPSL) {
+    var done = assert.async();
+    var pos;
+    var side = "SELL";
+    var amt = 1000;
+
+    tradable.getPrices([instrumentId]).then(function (prices) {
+        var bidPrice = prices[0].bid;
+        return tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", bidPrice - 0.0025, bidPrice + 0.0025, bidPrice);
+    }).then(function (order) {
+        assert.ok(!!order, 'Order with id: ' + order.id + ' received');
+        assert.ok(order.side === side, "Position with side");
+        assert.ok(order.amount === amt, "Position with amount");
+
+        return tradable.getOpenPositions();
+    }).then(function (positions) {
+        pos = positions[0];
+        assert.ok(pos.takeprofit, "Position with takeprofit");
+        assert.ok(pos.stoploss, "Position with stoploss");
+        assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
+
+        return tradable.cancelTakeProfit(pos.id);
+    }).then(function () {
+        return tradable.getPositionById(pos.id);
+    }).then(function (position) {
+        assert.ok(!!position && (!checkTPSL || !position.takeprofit), "cancelTakeProfitForAccount succeeded");
+        return tradable.cancelStopLoss(pos.id);
+    }).then(function () {
+        return tradable.getPositionById(pos.id);
+    }).then(function (position) {
+        assert.ok(!!position && (!checkTPSL || !position.stoploss), "cancelStopLossForAccount succeeded");
+        return tradable.closePosition(pos.id);
+    }).then(function () {
+        assert.ok(true, "Position closed");
+        done();
+    }, function (error) {
+        QUnit.pushFailure(JSON.stringify(error.responseJSON));
+        done();
+    });
+}
+
+QUnit.test( "Place Protected Order DISTANCE", function( assert ) {
+    var instrumentId = "EURUSD";
+    placeProtectedOrder(assert, instrumentId, true);
+});
+
 QUnit.test("Test On Off listener", function ( assert ) {
     assert.throws(function () {
         tradable.on("test", "invalidEvent", function () {});
@@ -666,6 +712,11 @@ QUnit.test( "Search and Get Instruments with City Index test account", function(
     searchAndGetIntruments(assert, done);
 });
 
+QUnit.test( "Place Protected Order ABSOLUTE", function( assert ) {
+    var instrumentId = tradable.getInstrumentFromSymbol("EURUSD").instrumentId;
+    placeProtectedOrder(assert, instrumentId, false);
+});
+
 QUnit.test( "Exclude Account and validate token", function( assert ) {
     var accountId = tradable.selectedAccount.uniqueId;
     tradable.excludeCurrentAccount();
@@ -692,16 +743,23 @@ QUnit.test("Sign Out", function ( assert ) {
     signOut(assert);
 });
 
-function authenticateWithCredentials(done, assert, login, pass, brokerId) {
-    tradable.authenticateWithCredentials(brokerId, login, pass).then(function () {
+function authenticateWithCredentials(done, assert, login, pass, brokerId, externalId) {
+    var resolve = function () {
         assert.ok( tradable.tradingEnabled === true, "Trading is enabled" );
         assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.uniqueId !== undefined, "Account selected: " + tradable.selectedAccount.uniqueId );
         assert.ok( !!tradable.selectedAccount && tradable.selectedAccount.brokerId === brokerId, "Correct account selected" );
         done();
-    }, function (err) {
+    };
+    var reject = function (err) {
         QUnit.pushFailure(JSON.stringify(err.responseJSON));
         done();
-    });
+    };
+    if(externalId) {
+        tradable.authenticateWithCredentials(brokerId, login, pass, externalId, resolve, reject);
+    } else {
+        tradable.authenticateWithCredentials(brokerId, login, pass, resolve, reject);
+    }
+
 }
 
 function signOut(assert) {

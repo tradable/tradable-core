@@ -27,7 +27,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.18/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.19/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}"></script>
 ```
 
@@ -105,10 +105,10 @@ tradable.placeMarketOrder(10000, "BUY", "EURUSD").then(function(order) {
 
 Tradable Core provides a bunch of additional helper methods to place orders, here are some examples:
 
-- Limit order: [.placeLimitOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeLimitOrder)
-- Stop order: [.placeStopOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeStopOrder)
-- Order with protections: [.placeOrderWithProtections(amount, price, side, instrumentId, type, tpDistance, slDistance)](https://tradable.github.io/js/docs/index.html#tradable.placeOrderWithProtections)
-- Cancel order: [.cancelOrder(orderId)](https://tradable.github.io/js/docs/index.html#tradable.cancelOrder)
+- Limit order: [placeLimitOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeLimitOrder)
+- Stop order: [placeStopOrder(amount, price, side, instrumentId)](https://tradable.github.io/js/docs/index.html#tradable.placeStopOrder)
+- Order with protections: [placeProtectedOrder(amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice)](https://tradable.github.io/js/docs/index.html#tradable.placeProtectedOrder)
+- Cancel order: [cancelOrder(orderId)](https://tradable.github.io/js/docs/index.html#tradable.cancelOrder)
 - [Many more...](https://tradable.github.io/js/docs/)
 
 Note that not all accounts support all order types, the account object (``tradable.selectedAccount``) provides information about what is supported: ``[account.takeProfitSupported, account.stopLossSupported, account.marketOrdersSupport, account.limitOrdersSupport, account.stopOrdersSupport]``
@@ -186,9 +186,12 @@ Gets called back every 5 minutes when the remaining token time is less than 30 m
 tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMillis) {});
 ```
 
-##### More
+##### Calculation utilities
 
-You can read the full API specification in our [documentation](https://tradable.github.io/js/docs/).
+Tradable Core provides a few helper methods to perform different calculations:
+
+- [calculatePipDistance](https://tradable.github.io/js/docs/index.html#tradable.calculatePipDistance): Calculates the distance in Pips/Points between prices.
+- [calculatePositionSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePipDistance): Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
 
 ### Light integration
 

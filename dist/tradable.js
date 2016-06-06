@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.18.1  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.19  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -44,7 +44,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.18.1',
+        version : '1.19',
         app_id: appId,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
@@ -656,14 +656,26 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {number} brokerId  The id of the broker that the account is at
          * @param      {String} login The login for the account
          * @param      {String} password The password for the account
+         * @param      {String} externalId 	Allows the caller to provide an id for the user, so it is possible to link the user identity in the caller's system with the Tradable account.
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
          */
-        authenticateWithCredentials : function (brokerId, login, password, resolve, reject) {
+        authenticateWithCredentials : function (brokerId, login, password, externalId, resolve, reject) {
             var deferred = new $.Deferred();
 
+            //Backwards compatibility, externalId was not supported before
+            if(typeof externalId === "function") { //externalId would be the old resolve
+                if(typeof resolve === "function") { //resolve would be the old reject
+                    reject = resolve;
+                }
+                resolve = externalId;
+            }
+
             var apiAuthenticationRequest = {"appId": tradable.app_id, "brokerId": brokerId, "login": login, "password": password};
+            if(typeof externalId === "string") {
+                apiAuthenticationRequest['externalId'] = externalId;
+            }
             tradable.makeAuthenticationRequest(deferred, "authenticate", apiAuthenticationRequest);
 
             return resolveDeferred(deferred, resolve, reject);
@@ -1265,9 +1277,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
          /**
-         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selectedAccount
+         * [deprecated] Please use 'placeProtectedOrder'
          * @param      {number} amount The order amount
-         * @param      {number} price The trigger price for the order
+         * @param      {number} price The trigger price for the order (0 if MARKET order)
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
@@ -1276,17 +1288,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         * @example
-         * _object-callback-begin_Order_object-callback-end_
+         * @deprecated [This method will eventually be removed, please use 'placeProtectedOrder']
          */
         placeOrderWithProtections : function (amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
             return tradable.placeOrderWithProtectionsForAccount(tradable.selectedAccountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject);
         },
          /**
-         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account
+         * [deprecated] Please use 'placeProtectedOrderForAccount'
          * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
-         * @param      {number} price The trigger price for the order
+         * @param      {number} price The trigger price for the order (0 if MARKET order)
          * @param      {String} side The order side ('BUY' or 'SELL')
          * @param      {String} instrumentId The instrument id for the order
          * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
@@ -1295,16 +1306,80 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         * @example
-         * _object-callback-begin_Order_object-callback-end_
+         * @deprecated [This method will eventually be removed, please use 'placeProtectedOrderForAccount']
          */
         placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
+            console.warn("placeOrderWithProtections is deprecated and will eventually be removed, please use placeProtectedOrder or placeProtectedOrderForAccount instead.");
             var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
             if(tpDistance)
                 order["takeProfitDistance"] = tpDistance;
             if(slDistance)
                 order["stopLossDistance"] = slDistance;
             return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
+        },
+        /**
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selected account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported.
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order (0 if MARKET order)
+         * @param      {String} side The order side ('BUY' or 'SELL')
+         * @param      {String} instrumentId The instrument id for the order
+         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
+         * @param      {number} takeProfitPrice Take profit trigger price (null if not desired)
+         * @param      {number} stopLossPrice Stop loss trigger price (null if not desired)
+         * @param      {number} currentBidOrAskPrice(optional) Used to calculate the distance. For 'BUY' orders the ask price for the instrument, for 'SELL' orders the bid price. It is only required when 'DISTANCE' is the only supported entryType.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
+         */
+        placeProtectedOrder : function (amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
+            return tradable.placeProtectedOrderForAccount(tradable.selectedAccount.uniqueId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject);
+        },
+        /**
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported.
+         * @param      {String} accountId The unique id for the account the request goes to
+         * @param      {number} amount The order amount
+         * @param      {number} price The trigger price for the order (0 if MARKET order)
+         * @param      {String} side The order side ('BUY' or 'SELL')
+         * @param      {String} instrumentId The instrument id for the order
+         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
+         * @param      {number} takeProfitPrice Take profit trigger price (null if not desired)
+         * @param      {number} stopLossPrice Stop loss trigger price (null if not desired)
+         * @param      {number} currentBidOrAskPrice(optional) Used to calculate the distance. For 'BUY' orders the ask price for the instrument, for 'SELL' orders the bid price. It is only required when 'DISTANCE' is the only supported entryType.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Order_object-callback-end_
+         */
+        placeProtectedOrderForAccount : function (accountId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
+            var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
+
+            var account = tradable.accountMap[accountId];
+            var supportedEntryTypes = account.protectionEntryTypes.entryTypes;
+
+            if((takeProfitPrice || stopLossPrice) && supportedEntryTypes.length) {
+                var entryType = ($.inArray("ABSOLUTE", supportedEntryTypes) !== -1) ? "ABSOLUTE" : "DISTANCE";
+                if(takeProfitPrice) {
+                    order["takeProfit"] = {
+                        'entryType': entryType,
+                        'value': getProtectionValue(takeProfitPrice, currentBidOrAskPrice, entryType)
+                    };
+                }
+                if(stopLossPrice) {
+                    order["stopLoss"] = {
+                        'entryType': entryType,
+                        'value': getProtectionValue(stopLossPrice, currentBidOrAskPrice, entryType)
+                    };
+                }
+            }
+
+            return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
+
+            function getProtectionValue(price, bidOrAsk, entryType) {
+                return (entryType === "DISTANCE") ? Math.abs(bidOrAsk - price) : price;
+            }
         },
         //v1/accounts/{accountId}/orders/pending
          /**
