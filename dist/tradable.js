@@ -547,35 +547,38 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
+         * Calculates the distance in Pips/Points between prices.
+         * @param {String} instrumentId The instrument id to calculate the position size
+         * @param {number} priceFrom Price to calculate the distance from
+         * @param {number} priceTo Price to calculate the distance to
+         * @returns {number} The pip/point distance
+         * @example
+         * // In the following example the distance result should be 31
+         * var pipDistance = tradable.calculatePipDistance("EURUSD", 1.13571, 1.13881);
+         */
+        calculatePipDistance : function (instrumentId, priceFrom, priceTo) {
+            var instrument = tradable.getInstrumentFromId(instrumentId);
+            if(!instrument) {
+                throw "Instrument not found for the given instrumentId: " + instrumentId;
+            }
+            var pipPrecision = (instrument.pipPrecision) ? instrument.pipPrecision : 0;
+            var change = ((priceFrom - priceTo) * Math.pow(10, pipPrecision));
+            var roundedChange = Math.round(change * 10) / 10;
+            return Math.abs(roundedChange);
+        },
+        /**
          * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
          * @param      {String} instrumentId The instrument id to calculate the position size
-         * @param      {number}   risk Percentage of account equity willing to risk or quantity willing to risk
-         * @param      {Boolean}   riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
-         * @param      {number}   stopLossInPips Stop loss value in pips/points
-         * @param      {number}   pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
-         * @param      {number}   equity(optional) The account equity, if not sent it will be taken from the last received snapshot
+         * @param      {number} risk Percentage of account equity willing to risk or quantity willing to risk
+         * @param      {Boolean} riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
+         * @param      {number} stopLossInPips Stop loss value in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
+         * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
+         * @param      {number} equity(optional) The account equity, if not sent it will be taken from the selected account's last received snapshot
          * @return      {number} Calculated position size
          * @example
          * var positionSize = tradable.calculatePositionSize("EURUSD", 10, false, 25, 0.0001);
          */
         calculatePositionSize : function(instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
-            return tradable.calculatePositionSizeForAccount(tradable.selectedAccount.uniqueId, instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity);
-        },
-        /**
-         * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
-         * @param      {String}   accountId Account uniqueId
-         * @param      {String} instrumentId The instrument id to calculate the position size
-         * @param      {number}   risk Percentage of account equity willing to risk or quantity willing to risk
-         * @param      {Boolean}   riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
-         * @param      {number}   stopLossInPips Stop loss value in pips/points
-         * @param      {number}   pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
-         * @param      {number}   equity(optional) The account equity, if not sent it will be taken from the last received snapshot
-         * @return      {number} Calculated position size
-         * @example
-         * var actId = tradable.selectedAccount.uniqueId;
-         * var positionSize = tradable.calculatePositionSizeForAccount(actId, "EURUSD", 10, false, 25, 0.0001);
-         */
-        calculatePositionSizeForAccount : function(accountId, instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
             // Formula: Position size = ((accountSize x risk %) / stopLossInPips)/ pip value per standard lot
             var curEquity = equity;
             if(!curEquity && tradable.lastSnapshot) {

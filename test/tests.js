@@ -537,6 +537,21 @@ QUnit.test("Test calculatePositionSize", function ( assert ) {
     assert.ok((posSizeMoney % instrument.minAmount) === 0, "Position size is multiple of minAmount " + posSizeMoney + ", miAmt: " + instrument.minAmount);
 });
 
+QUnit.test("Test calculatePipDistance", function ( assert ) {
+    assert.throws(function () {
+        tradable.calculatePipDistance("asdasdasd", 1.123, 1.12312)
+    }, "Invalid instrumentId throws exception.");
+
+    var pipDistance = tradable.calculatePipDistance("EURUSD", 1.13571, 1.13881);
+    assert.ok(pipDistance === 31, "Pips calculated correctly for EURUSD: " + pipDistance);
+
+    pipDistance = tradable.calculatePipDistance("EURUSD", 1.13883, 1.13571);
+    assert.ok(pipDistance === 31.2, "Pips calculated correctly for EURUSD from to reversed: " + pipDistance);
+
+    pipDistance = tradable.calculatePipDistance("GER30", 1026.16, 1028.24);
+    assert.ok(pipDistance === 2.1, "Pips calculated correctly for GER30 0 precision: " + pipDistance);
+});
+
 QUnit.test("Test addSymboToUpdates removeSymbolFromUpdates", function ( assert ) {
     var updateClientId = "myClientId";
     var symbol = "EURUSD";
