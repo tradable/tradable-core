@@ -1,7 +1,8 @@
 # Tradable Core
-[![Build Status](https://travis-ci.org/tradable/tradable-core.svg?branch=master)](https://travis-ci.org/tradable/tradable-core) [![npm version](https://badge.fury.io/js/tradable-core.svg)](http://badge.fury.io/js/tradable-core) [![Dependency Status](https://david-dm.org/tradable/tradable-core.svg)](https://david-dm.org/tradable/tradable-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-core) [![codecov](https://codecov.io/gh/tradable/tradable-core/branch/master/graph/badge.svg)](https://codecov.io/gh/tradable/tradable-core)
 
-Tradable lets users trade from any app by connecting multiple brokerages through one modern API. This project is a lightweight JavaScript wrapper of the Tradable API that will make the integration with it really easy.
+> Tradable lets users trade from any app by connecting multiple brokerages through one modern API. This project is a lightweight JavaScript wrapper of the Tradable API that will make the integration with it really easy.
+
+[![Build Status](https://travis-ci.org/tradable/tradable-core.svg?branch=master)](https://travis-ci.org/tradable/tradable-core) [![npm version](https://badge.fury.io/js/tradable-core.svg)](http://badge.fury.io/js/tradable-core) [![Dependency Status](https://david-dm.org/tradable/tradable-core.svg)](https://david-dm.org/tradable/tradable-core) [![Code Climate](https://codeclimate.com/github/tradable/tradable-core/badges/gpa.svg)](https://codeclimate.com/github/tradable/tradable-core) [![codecov](https://codecov.io/gh/tradable/tradable-core/branch/master/graph/badge.svg)](https://codecov.io/gh/tradable/tradable-core)
 
 [![NPM](https://nodei.co/npm/tradable-core.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/tradable-core/)
 
