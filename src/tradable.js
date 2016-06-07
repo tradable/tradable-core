@@ -566,10 +566,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return Math.abs(roundedChange);
         },
         /**
+         * Calculates the resulting equity profit or loss for a position size if a take profit or stop loss at a Pips/Points distance is hit
+         * @param      {number} positionSize The position amount
+         * @param      {number} pipDistance Distance in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
+         * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
+         * @return      {number} Calculated position size
+         */
+        calculateExpectedProfitOrLoss : function (positionSize, pipDistance, pipValue) {
+            return Math.round(positionSize * pipDistance * pipValue * 100) / 100;
+        },
+        /**
          * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
          * @param      {String} instrumentId The instrument id to calculate the position size
          * @param      {number} risk Percentage of account equity willing to risk or quantity willing to risk
-         * @param      {Boolean} riskIsMoney true if the given risk value is a percentage. false if the given quantity is the amount of money willing to risk
+         * @param      {Boolean} riskIsMoney true if the given quantity is the amount of money willing to risk. false if the given risk value is a percentage
          * @param      {number} stopLossInPips Stop loss value in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
          * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
          * @param      {number} equity(optional) The account equity, if not sent it will be taken from the selected account's last received snapshot

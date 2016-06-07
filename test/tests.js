@@ -147,7 +147,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
 
 QUnit.test( "Authenticate with test account and an externalId", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "unittestjscore@tradable.com", "tradable", 1, "myExternalUnitTestId");
+    authenticateWithCredentials(done, assert, "unittestjscore2@tradable.com", "tradable", 1, "myExternalUnitTestId");
 });
 
 QUnit.test( "User, AppInfo and Brokers", function( assert ) {
@@ -596,6 +596,15 @@ QUnit.test("Test calculatePipDistance", function ( assert ) {
 
     pipDistance = tradable.calculatePipDistance("GER30", 1026.16, 1028.24);
     assert.ok(pipDistance === 2.1, "Pips calculated correctly for GER30 0 precision: " + pipDistance);
+});
+
+QUnit.test("Test calculateExpectedProfitOrLoss", function ( assert ) {
+    var expectedProfit = tradable.calculateExpectedProfitOrLoss(10000, 25, 0.0001);
+    assert.ok(expectedProfit === 25, "Expected profit should be 25: " + expectedProfit);
+
+    // Some pipValues are a bit more funky like USDCAD 0.00007832540288629111 - let's see if rounding works
+    expectedProfit = tradable.calculateExpectedProfitOrLoss(10000, 25, 0.00007832540288629111);
+    assert.ok(expectedProfit === 19.58, "Expected profit should be 19.58: " + expectedProfit);
 });
 
 QUnit.test("Test addSymboToUpdates removeSymbolFromUpdates", function ( assert ) {
