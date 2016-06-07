@@ -570,27 +570,45 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {number} positionSize The position amount
          * @param      {number} pipDistance Distance in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
          * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
-         * @return      {number} Calculated position size
+         * @return      {number} The expected profit or loss in account currency
+         * @example
+         * // The pipValue for EURUSD is 0.0001 in a USD account, so if a take profit at 25 pips is hit
+         * // for a 10000 EURUSD position the result should be 25
+         * var expectedProfit = tradable.calculatePipDistance(10000, 25, 0.0001);
          */
         calculateExpectedProfitOrLoss : function (positionSize, pipDistance, pipValue) {
             return Math.round(positionSize * pipDistance * pipValue * 100) / 100;
         },
         /**
-         * Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
+         * Calculates a position size for an instrument out of a given equity percentage willing to risk.
          * @param      {String} instrumentId The instrument id to calculate the position size
-         * @param      {number} risk Percentage of account equity willing to risk or quantity willing to risk
-         * @param      {Boolean} riskIsMoney true if the given quantity is the amount of money willing to risk. false if the given risk value is a percentage
+         * @param      {number} riskPercentage Percentage of account equity willing to risk
          * @param      {number} stopLossInPips Stop loss value in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
          * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
          * @param      {number} equity(optional) The account equity, if not sent it will be taken from the selected account's last received snapshot
          * @return      {number} Calculated position size
          * @example
          * // Calculate the position size for risking 10% of the account's equity with a 25 pips stop loss
-         * var positionSize = tradable.calculatePositionSize("EURUSD", 10, false, 25, pipValue);
-         *
-         * // Calculate the position size for risking 10k of the account's equity with a 25 pips stop loss
-         * var positionSize = tradable.calculatePositionSize("EURUSD", 10000, true, 25, pipValue);
+         * var positionSize = tradable.calculatePositionSize("EURUSD", 10, 25, pipValue);
          */
+        calculatePositionSizeForRiskPercentage : function(instrumentId, riskPercentage, stopLossInPips, pipValue, equity){
+            return tradable.calculatePositionSize(instrumentId, riskPercentage, false, stopLossInPips, pipValue, equity);
+        },
+        /**
+         * Calculates a position size for an instrument out of a given amount willing to risk.
+         * @param      {String} instrumentId The instrument id to calculate the position size
+         * @param      {number} riskAmount Amount of equity (money in account currency) willing to risk
+         * @param      {number} stopLossInPips Stop loss value in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
+         * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
+         * @param      {number} equity(optional) The account equity, if not sent it will be taken from the selected account's last received snapshot
+         * @return      {number} Calculated position size
+         * @example
+         * // Calculate the position size for risking 10k of the account's equity with a 25 pips stop loss
+         * var positionSize = tradable.calculatePositionSizeForRiskAmount("EURUSD", 10000, 25, pipValue);
+         */
+        calculatePositionSizeForRiskAmount : function(instrumentId, riskAmount, stopLossInPips, pipValue, equity){
+            return tradable.calculatePositionSize(instrumentId, riskAmount, true, stopLossInPips, pipValue, equity);
+        },
         calculatePositionSize : function(instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
             // Formula: Position size = ((accountSize x risk %) / stopLossInPips)/ pip value per standard lot
             var curEquity = equity;
@@ -1892,7 +1910,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * This method will initialize tradable core with the minimum required in order to be able to use the API calls that do not require a selected account. Beware! If you use this method instead of 'enableWithAccessToken', there will not be a selectedAccount and the instruments will not be cached. The on/off listeners will not work either. I.e. you will only be able to use methods that require an 'accountId'
          * @param      {String} access_token    The authentication token granting access to the account
          * @param      {String} end_point   The endpoint to send API requests to
-         * @param      {String} expires_in  The expiry date (in milliseconds) of the access token.
+         * @param      {String} expires_in  The expiry date (in seconds) of the access token.
          * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject(optional) Error callback for the API call
          * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers     

@@ -554,7 +554,7 @@ QUnit.test("Test onAccountUpdated", function ( assert ) {
     tradable.setAccountUpdateFrequencyMillis(100000000);
 });
 
-QUnit.test("Test calculatePositionSize", function ( assert ) {
+QUnit.test("Test calculatePositionSize, calculatePositionSizeForRiskPercentage and calculatePositionSizeForRiskAmount", function ( assert ) {
     assert.throws(function () {
         tradable.calculatePositionSize(1000, false, 25, 1.15);
     }, "Invalid risk and riskIsMoney combination fails.");
@@ -574,6 +574,13 @@ QUnit.test("Test calculatePositionSize", function ( assert ) {
     var perc = moneyToRisk * 100 / tradable.lastSnapshot.metrics.equity;
     posSizePerc = tradable.calculatePositionSize("EURUSD", perc, false, stopLossPips, pipValue);
     assert.ok(posSizeMoney === posSizePerc, "Both ways of calculatePositionSize coincide no equity provided " + posSizeMoney + ", " + posSizePerc);
+
+    var posSizeMoneySpecific = tradable.calculatePositionSizeForRiskAmount("EURUSD", moneyToRisk, stopLossPips, pipValue);
+    var posSizePercSpecific = tradable.calculatePositionSizeForRiskPercentage("EURUSD", perc, stopLossPips, pipValue);
+
+    assert.ok(posSizeMoney === posSizeMoneySpecific, "calculatePositionSizeForRiskAmount same as calculatePositionSize " + posSizeMoney + ", " + posSizeMoneySpecific);
+    assert.ok(posSizePercSpecific === posSizePerc, "calculatePositionSizeForRiskPercentage same as calculatePositionSize " + posSizePercSpecific + ", " + posSizePerc);
+    assert.ok(posSizeMoneySpecific === posSizePercSpecific, "calculatePositionSizeForRiskAmount and calculatePositionSizeForRiskPercentage coincide too: " + posSizeMoneySpecific + ", " + posSizePercSpecific);
 
     // GER30 requires multipleOfMinAcount and the position size should be multiple
     var insId = "GER30";

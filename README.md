@@ -27,7 +27,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.19/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.19.1/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}"></script>
 ```
 
@@ -191,7 +191,8 @@ tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMi
 Tradable Core provides a few helper methods to perform different calculations:
 
 - [calculatePipDistance](https://tradable.github.io/js/docs/index.html#tradable.calculatePipDistance): Calculates the distance in Pips/Points between prices.
-- [calculatePositionSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSize): Calculates a position size for an instrument out of a given risk percentage or amount willing to risk.
+- [calculatePositionSizeForRiskAmount](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSizeForRiskAmount): Calculates a position size for an instrument out of a given amount willing to risk.
+- [calculatePositionSizeForRiskPercentage](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSizeForRiskPercentage): Calculates a position size for an instrument out of a given equity percentage willing to risk.
 - [calculateExpectedProfitOrLoss](https://tradable.github.io/js/docs/index.html#tradable.calculateExpectedProfitOrLoss): Calculates the resulting equity profit or loss for a position size if a take profit or stop loss at a Pips/Points distance is hit.
 
 ### Light integration
