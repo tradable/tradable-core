@@ -576,7 +576,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @param      {number} equity(optional) The account equity, if not sent it will be taken from the selected account's last received snapshot
          * @return      {number} Calculated position size
          * @example
-         * var positionSize = tradable.calculatePositionSize("EURUSD", 10, false, 25, 0.0001);
+         * // Calculate the position size for risking 10% of the account's equity with a 25 pips stop loss
+         * var positionSize = tradable.calculatePositionSize("EURUSD", 10, false, 25, pipValue);
+         *
+         * // Calculate the position size for risking 10k of the account's equity with a 25 pips stop loss
+         * var positionSize = tradable.calculatePositionSize("EURUSD", 10000, true, 25, pipValue);
          */
         calculatePositionSize : function(instrumentId, risk, riskIsMoney, stopLossInPips, pipValue, equity){
             // Formula: Position size = ((accountSize x risk %) / stopLossInPips)/ pip value per standard lot
@@ -2211,9 +2215,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return deferred;
     }
     function gatherForexInstrumentIds(instrumentResults) {
+        var results = 0;
         $(instrumentResults).each(function(idx, instrumentResult) {
-            if(instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) {
+            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) && results < 31) {
                 idsToRequest.push(instrumentResult.instrumentId);
+                results++;
             }
         });
     }

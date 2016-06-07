@@ -751,7 +751,7 @@ function authenticateWithCredentials(done, assert, login, pass, brokerId, extern
         done();
     };
     var reject = function (err) {
-        QUnit.pushFailure(JSON.stringify(err.responseJSON));
+        QUnit.pushFailure(JSON.stringify((err.responseJSON) ? err.responseJSON : err));
         done();
     };
     if(externalId) {
