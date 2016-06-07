@@ -147,7 +147,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
 
 QUnit.test( "Authenticate with test account and an externalId", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "unittestjscore2@tradable.com", "tradable", 1, "myExternalUnitTestId");
+    authenticateWithCredentials(done, assert, "unittestjscore3@tradable.com", "tradable", 1, "myExternalUnitTestId");
 });
 
 QUnit.test( "User, AppInfo and Brokers", function( assert ) {
