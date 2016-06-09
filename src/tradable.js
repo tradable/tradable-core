@@ -1349,7 +1349,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
         /**
-         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selected account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported.
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selected account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported
          * @param      {number} amount The order amount
          * @param      {number} price The trigger price for the order (0 if MARKET order)
          * @param      {String} side The order side ('BUY' or 'SELL')
@@ -1368,7 +1368,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return tradable.placeProtectedOrderForAccount(tradable.selectedAccount.uniqueId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject);
         },
         /**
-         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported.
+         * Place a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported
          * @param      {String} accountId The unique id for the account the request goes to
          * @param      {number} amount The order amount
          * @param      {number} price The trigger price for the order (0 if MARKET order)
@@ -1385,32 +1385,139 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-callback-begin_Order_object-callback-end_
          */
         placeProtectedOrderForAccount : function (accountId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
-            var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
+            var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
 
+            $.extend(orderCommand, tradable.getOrderProtections(accountId, takeProfitPrice, stopLossPrice, currentBidOrAskPrice));
+
+            return tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
+        },
+        /**
+         * Modify a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on the selected account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported
+         * @param      {String} orderId Id of order to modify
+         * @param      {number} price The new trigger price
+         * @param      {number} takeProfitPrice Take profit trigger price (null or currentPrice if no modification required)
+         * @param      {number} stopLossPrice Stop loss trigger price (null or currentPrice if no modification required)
+         * @param      {number} currentBidOrAskPrice(optional) Used to calculate the distance. For 'BUY' orders the ask price for the instrument, for 'SELL' orders the bid price. It is only required when 'DISTANCE' is the only supported entryType.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        modifyProtectedOrder : function (orderId, price, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
+            return tradable.modifyProtectedOrderForAccount(tradable.selectedAccount.uniqueId, orderId, price, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject);
+        },
+        /**
+         * Modify a MARKET, LIMIT or STOP order with Take Profit and/or Stop Loss protections on a specific account. Some accounts require an absolute price for the take profit and others require a price distance (See 'account.protectionEntryTypes'). This method will send the required entry type and value, i.e. it will calculate the distance from the price and send it if the account only supports the 'DISTANCE' entry type or just send the desired take profit or stop loss prices if the 'ABSOLUTE' entry type is supported
+         * @param      {String} accountId The unique id for the account the request goes to
+         * @param      {String} orderId Id of order to modify
+         * @param      {number} price The new trigger price
+         * @param      {number} takeProfitPrice Take profit trigger price (null or currentPrice if no modification required)
+         * @param      {number} stopLossPrice Stop loss trigger price (null or currentPrice if no modification required)
+         * @param      {number} currentBidOrAskPrice(optional) Used to calculate the distance. For 'BUY' orders the ask price for the instrument, for 'SELL' orders the bid price. It is only required when 'DISTANCE' is the only supported entryType.
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        modifyProtectedOrderForAccount : function (accountId, orderId, price, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
+            var orderModification = {'price': price};
+
+            $.extend(orderModification, tradable.getOrderProtections(accountId, takeProfitPrice, stopLossPrice, currentBidOrAskPrice));
+
+            return tradable.makeAccountRequest("PUT", accountId, "orders/"+orderId, orderModification, resolve, reject);
+        },
+        getOrderProtections : function(accountId, takeProfitPrice, stopLossPrice, currentBidOrAskPrice) {
             var account = tradable.accountMap[accountId];
             var supportedEntryTypes = account.protectionEntryTypes.entryTypes;
 
-            if((takeProfitPrice || stopLossPrice) && supportedEntryTypes.length) {
+            var orderProtections = {};
+            if (supportedEntryTypes.length) {
                 var entryType = ($.inArray("ABSOLUTE", supportedEntryTypes) !== -1) ? "ABSOLUTE" : "DISTANCE";
+
                 if(takeProfitPrice) {
-                    order["takeProfit"] = {
-                        'entryType': entryType,
-                        'value': getProtectionValue(takeProfitPrice, currentBidOrAskPrice, entryType)
-                    };
+                    orderProtections["takeProfit"] = getProtection(takeProfitPrice, currentBidOrAskPrice, entryType);
                 }
                 if(stopLossPrice) {
-                    order["stopLoss"] = {
-                        'entryType': entryType,
-                        'value': getProtectionValue(stopLossPrice, currentBidOrAskPrice, entryType)
-                    };
+                    orderProtections["stopLoss"] = getProtection(stopLossPrice, currentBidOrAskPrice, entryType);
                 }
             }
+            return orderProtections;
 
-            return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
-
-            function getProtectionValue(price, bidOrAsk, entryType) {
-                return (entryType === "DISTANCE") ? Math.abs(bidOrAsk - price) : price;
+            function getProtection(price, bidOrAsk, entryType) {
+                return {
+                    'entryType': entryType,
+                    'value': (entryType === "DISTANCE") ? Math.abs(bidOrAsk - price) : price
+                };
             }
+        },
+        /**
+         * Cancel a Take Profit protection attached to a MARKET, LIMIT or STOP order on the selected account
+         * @param      {String} orderId Id of order to which the Take Profit is attached
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        cancelTakeProfitOnOrder : function (orderId, resolve, reject) {
+            return tradable.cancelTakeProfitOnOrderForAccount(tradable.selectedAccount.uniqueId, orderId, resolve, reject);
+        },
+        /**
+         * Cancel a Take Profit protection attached to a MARKET, LIMIT or STOP order on a specific account
+         * @param      {String} accountId The unique id for the account the request goes to
+         * @param      {String} orderId Id of order to which the Take Profit is attached
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        cancelTakeProfitOnOrderForAccount : function (accountId, orderId, resolve, reject) {
+            var deferred = tradable.gerProtectionCancellationDeferred(accountId, orderId, 'takeProfit', resolve, reject);
+            return resolveDeferred(deferred, resolve, reject);
+        },
+        /**
+         * Cancel a Stop Loss protection attached to a MARKET, LIMIT or STOP order on the selected account
+         * @param      {String} orderId Id of order to which the Stop Loss is attached
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        cancelStopLossOnOrder : function (orderId, resolve, reject) {
+            return tradable.cancelStopLossOnOrderForAccount(tradable.selectedAccount.uniqueId, orderId, resolve, reject);
+        },
+        /**
+         * Cancel a Stop Loss protection attached to a MARKET, LIMIT or STOP order on a specific account
+         * @param      {String} accountId The unique id for the account the request goes to
+         * @param      {String} orderId Id of order to which the Stop Loss is attached
+         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
+         * @param      {Function} reject(optional) Error callback for the API call
+         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
+         * @example
+         * _object-callback-begin_Empty_object-callback-end_
+         */
+        cancelStopLossOnOrderForAccount : function (accountId, orderId, resolve, reject) {
+            var deferred = tradable.gerProtectionCancellationDeferred(accountId, orderId, 'stopLoss', resolve, reject);
+            return resolveDeferred(deferred, resolve, reject);
+        },
+        gerProtectionCancellationDeferred : function (accountId, orderId, protectionType, resolve, reject) {
+            var deferred = new $.Deferred();
+
+            tradable.getOrderByIdForAccount(accountId, orderId).then(function (order) {
+                var orderModification = {'price': order.price};
+                orderModification[protectionType] = null;
+                return tradable.makeAccountRequest("PUT", accountId, "orders/"+order.id, orderModification, resolve, reject);
+            }).then(function (data) {
+                deferred.resolve(data);
+            }, function (error) {
+                deferred.reject(error);
+            });
+
+            return deferred;
         },
         //v1/accounts/{accountId}/orders/pending
          /**
@@ -2244,7 +2351,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function gatherForexInstrumentIds(instrumentResults) {
         var results = 0;
         $(instrumentResults).each(function(idx, instrumentResult) {
-            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) && results < 31) {
+            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) && results < 16) {
                 idsToRequest.push(instrumentResult.instrumentId);
                 results++;
             }
