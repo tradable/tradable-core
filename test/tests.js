@@ -448,6 +448,11 @@ function placeProtectedOrder(assert, instrumentId, checkTPSL) {
     var side = "SELL";
     var amt = 1000;
 
+    assert.throws(function () { tradable.placeProtectedOrder(amt, null, side, instrumentId, "MARKET", null, null, null); }, "Null price with Market order throws exception");
+    assert.throws(function () { tradable.placeProtectedOrder(amt, 1.12, side, instrumentId, "MARKET", null, null, null); }, "Invalid price with Market order throws exception");
+    assert.throws(function () { tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", 1.15, 1.12, undefined); }, "Invalid bid ask with Market order throws exception");
+    assert.throws(function () { tradable.placeProtectedOrder(amt, null, side, instrumentId, "LIMIT", null, null, undefined); }, "Invalid price for Limit order throws exception");
+
     tradable.getPrices([instrumentId]).then(function (prices) {
         var bidPrice = prices[0].bid;
         return tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", bidPrice - 0.0025, bidPrice + 0.0025, bidPrice);
@@ -485,7 +490,7 @@ function placeProtectedOrder(assert, instrumentId, checkTPSL) {
     });
 }
 
-function modifyProtectedOrder(assert, instrumentId) {
+function modifyProtectedOrder(assert, instrumentId, checkTPSL) {
     var done = assert.async();
     var side = "BUY";
     var amt = 1000;
@@ -501,36 +506,51 @@ function modifyProtectedOrder(assert, instrumentId) {
         assert.ok(order.amount === amt, "Order with amount");
         assert.ok(!order.takeProfit, "Order without Take Profit");
         assert.ok(!order.stopLoss, "Order without Stop Loss");
-        return tradable.getPrices([instrumentId]);
-    }).then(function (prices) {
-        var askPrice = prices[0].ask;
-        return tradable.modifyProtectedOrder(ord.id, ord.price,  ord.price + 0.0025, ord.price - 0.0025, askPrice);
+
+        return tradable.modifyProtectedOrder(ord, ord.price, ord.price + 0.0025, ord.price - 0.0025);
     }).then(function () {
         assert.ok(true, "Order modified success");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
         assert.ok(!!order.takeProfit, "Order modified and has Take Profit");
         assert.ok(!!order.stopLoss, "Order modified and has Stop Loss");
-        return tradable.modifyProtectedOrder(ord.id, ord.price, null, null);
+        return tradable.modifyProtectedOrder(ord, ord.price - 0.002, undefined, undefined);
     }).then(function () {
         assert.ok(true, "Order modified success");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
-        assert.ok(!!order.takeProfit, "Order modified passing null and still has Take Profit");
-        assert.ok(!!order.stopLoss, "Order modified passing null and still has Stop Loss");
+        assert.ok(!!order.takeProfit, "Order modified passing undefined and still has Take Profit");
+        assert.ok(!!order.stopLoss, "Order modified passing undefined and still has Stop Loss");
         return tradable.cancelTakeProfitOnOrder(ord.id);
     }).then(function () {
         assert.ok(true, "TP cancelled success");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
-        assert.ok(!order.takeProfit, "Take Profit on order cancelled");
+        assert.ok((!checkTPSL || !order.takeProfit), "Take Profit on order cancelled");
         return tradable.cancelStopLossOnOrder(ord.id);
     }).then(function () {
         assert.ok(true, "SL cancelled success");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
-        assert.ok(!order.stopLoss, "Stop Loss on order cancelled");
-        return tradable.cancelOrder(ord.id);
+        assert.ok((!checkTPSL || !order.stopLoss), "Stop Loss on order cancelled");
+        return tradable.getPrices([instrumentId]);
+    }).then(function (prices) {
+        var askPrice = prices[0].ask;
+        return tradable.modifyProtectedOrder(ord, null,  ord.price + 0.0025, ord.price - 0.0025, askPrice);
+    }).then(function () {
+        assert.ok(true, "2- Order modified success for protections cancellation with null");
+        return tradable.getOrderById(ord.id);
+    }).then(function (order) {
+        assert.ok(!!order.takeProfit, "2- Order modified and has Take Profit for protections cancellation with null");
+        assert.ok(!!order.stopLoss, "2- Order modified and has Stop Loss for protections cancellation with null");
+        return tradable.modifyProtectedOrder(order, ord.price, null, null);
+    }).then(function () {
+        assert.ok(true, "Protections cancelled with null success");
+        return tradable.getOrderById(ord.id);
+    }).then(function (order) {
+        assert.ok(!order.takeProfit, "Take Profit cancelled with null");
+        assert.ok(!order.stopLoss, "Stop Loss cancelled with null");
+        return tradable.cancelOrder(order.id);
     }).then(function () {
         assert.ok(true, "Order Successfully cancelled");
         done();
@@ -546,7 +566,7 @@ QUnit.test( "Place Protected Order DISTANCE", function( assert ) {
 
 QUnit.test( "Place, Modify Protected Order, Cancel TP and Cancel SL DISTANCE", function( assert ) {
     var instrumentId = "EURUSD";
-    modifyProtectedOrder(assert, instrumentId);
+    modifyProtectedOrder(assert, instrumentId, true);
 });
 
 QUnit.test("Test On Off listener", function ( assert ) {
@@ -796,7 +816,7 @@ QUnit.test( "Place Protected Order ABSOLUTE", function( assert ) {
 
 QUnit.test( "Place, Modify Protected Order, Cancel TP and Cancel SL ABSOLUTE", function( assert ) {
     var instrumentId = tradable.getInstrumentFromSymbol("EURUSD").instrumentId;
-    modifyProtectedOrder(assert, instrumentId);
+    modifyProtectedOrder(assert, instrumentId, false);
 });
 
 QUnit.test( "Exclude Account and validate token", function( assert ) {

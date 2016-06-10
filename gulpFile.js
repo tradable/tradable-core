@@ -95,10 +95,7 @@ function getJSONTemplateForObject(objName, list) {
     for(i = 0 ; i < apiJsonArray.length ; i++) {
         if(apiJsonArray[i].name === objName) {
             var jsonObj = apiJsonArray[i].jsondocTemplate;
-            if(typeof list !== "undefined" && list) {
-              return [jsonObj];
-            }
-            return jsonObj; // Print the json response
+            return (list) ? [jsonObj] : jsonObj; // Print the json response
         }
     }
     throw new gutil.PluginError({
