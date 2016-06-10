@@ -1504,8 +1504,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-callback-begin_Empty_object-callback-end_
          */
         cancelTakeProfitOnOrderForAccount : function (accountId, orderId, resolve, reject) {
-            var orderModification = {'takeProfit': null};
-            return tradable.makeAccountRequest("PUT", accountId, "orders/"+orderId, orderModification, resolve, reject);
+            return tradable.makeAccountRequest("PUT", accountId, "orders/"+orderId, {'takeProfit': null}, resolve, reject);
         },
         /**
          * Cancel a Stop Loss protection attached to a MARKET, LIMIT or STOP order on the selected account
@@ -1530,8 +1529,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-callback-begin_Empty_object-callback-end_
          */
         cancelStopLossOnOrderForAccount : function (accountId, orderId, resolve, reject) {
-            var orderModification = {'stopLoss': null};
-            return tradable.makeAccountRequest("PUT", accountId, "orders/"+orderId, orderModification, resolve, reject);
+            return tradable.makeAccountRequest("PUT", accountId, "orders/"+orderId, {'stopLoss': null}, resolve, reject);
         },
         //v1/accounts/{accountId}/orders/pending
          /**
