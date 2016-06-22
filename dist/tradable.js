@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.19.2  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.19.3  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -44,7 +44,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.19.2',
+        version : '1.19.3',
         app_id: appId,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
@@ -2479,6 +2479,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.reject(error);
             });
         } else {
+            tradable.signOut();
             deferred.reject();
         }
         return deferred;
@@ -2617,8 +2618,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function internalSignOut() {
         var deferred = new $.Deferred();
 
-        if(!tradable.tradingEnabled 
-            || (tradable.selectedAccount.brokerId < 0 && tradable.allAccounts.length === 1)) {
+        if(tradable.selectedAccount.brokerId < 0 && tradable.allAccounts.length === 1) {
             deferred.resolve();
             return deferred;
         }

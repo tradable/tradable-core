@@ -2478,6 +2478,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 deferred.reject(error);
             });
         } else {
+            tradable.signOut();
             deferred.reject();
         }
         return deferred;
@@ -2616,8 +2617,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function internalSignOut() {
         var deferred = new $.Deferred();
 
-        if(!tradable.tradingEnabled 
-            || (tradable.selectedAccount.brokerId < 0 && tradable.allAccounts.length === 1)) {
+        if(tradable.selectedAccount.brokerId < 0 && tradable.allAccounts.length === 1) {
             deferred.resolve();
             return deferred;
         }
