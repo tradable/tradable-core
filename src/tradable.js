@@ -2664,8 +2664,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     global.tradable = tradable;
     global.tradableEmbed = tradable;
 
-    // CommonJS
-    if (typeof require === "function" && typeof module === "object" && module && module.exports) {
+    if (typeof define === "function" && define && define.amd) {
+        // AMD / RequireJS
+        define("tradable-core", [], tradable);
+    } else if (typeof require === "function" && typeof module === "object" && module && module.exports) {
+        // Node / CommonJS
         module.exports = tradable;
     }
 
