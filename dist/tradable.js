@@ -549,9 +549,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Calculates the distance in Pips/Points between prices.
          * @param {String} instrumentId The instrument id to calculate the position size
-         * @param {number} priceFrom Price to calculate the distance from
-         * @param {number} priceTo Price to calculate the distance to
-         * @returns {number} The pip/point distance
+         * @param {number} priceFrom Price to calculate the distance from (opening price, 'openPrice' for a position or price for an 'order')
+         * @param {number} priceTo Price to calculate the distance to (closing price or protection price)
+         * @returns {number} The pip/point distance (can return a negative value if from > to)
          * @example
          * // In the following example the distance result should be 31
          * var pipDistance = tradable.calculatePipDistance("EURUSD", 1.13571, 1.13881);
@@ -562,20 +562,28 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 throw "Instrument not found for the given instrumentId: " + instrumentId;
             }
             var pipPrecision = (instrument.pipPrecision) ? instrument.pipPrecision : 0;
-            var change = ((priceFrom - priceTo) * Math.pow(10, pipPrecision));
-            var roundedChange = Math.round(change * 10) / 10;
-            return Math.abs(roundedChange);
+            var change = ((priceTo - priceFrom) * Math.pow(10, pipPrecision));
+            return Math.round(change * 10) / 10;
         },
         /**
-         * Calculates the resulting equity profit or loss for a position size if a take profit or stop loss at a Pips/Points distance is hit
-         * @param      {number} positionSize The position amount
+         * Calculates the resulting equity profit or loss for a trade size if a take profit or stop loss at a Pips/Points distance is hit
+         * @param      {number} positionSize The position size, for a Long/Buy position: positive, for a Short/Sell trade: negative
          * @param      {number} pipDistance Distance in pips/points. It can be calculated using the method 'tradable.calculatePipDistance'
          * @param      {number} pipValue The current value of one pip for one unit of this instrument converted to the account currency, it is part of the Price object
          * @return      {number} The expected profit or loss in account currency
          * @example
          * // The pipValue for EURUSD is 0.0001 in a USD account, so if a take profit at 25 pips is hit
-         * // for a 10000 EURUSD position the result should be 25
-         * var expectedProfit = tradable.calculatePipDistance(10000, 25, 0.0001);
+         * // for a 10000 EURUSD Long (BUY) position the result should be 25
+         * var position = {side: 'BUY', openPrice: 1.13250, amount: 10000};
+         * var amount = (position.side === "BUY") ? position.amount : (position.amount*-1);
+         * var pipDistance = tradable.calculatePipDistance("EURUSD", position.openPrice, 1.13500);
+         * var expectedProfit = tradable.calculateExpectedProfitOrLoss(amount, pipDistance, 0.0001);
+         *
+         * // If the take profit is closing a Short (SELL) position instead, the amount should be negative
+         * var order = {side: 'SELL', price: 1.13750, amount: 10000};
+         * var amount = (order.side === "BUY") ? order.amount : (order.amount*-1);
+         * var pipDistance = tradable.calculatePipDistance("EURUSD", order.price, 1.13500);
+         * var expectedProfit = tradable.calculateExpectedProfitOrLoss(amount, pipDistance, 0.0001);
          */
         calculateExpectedProfitOrLoss : function (positionSize, pipDistance, pipValue) {
             return Math.round(positionSize * pipDistance * pipValue * 100) / 100;

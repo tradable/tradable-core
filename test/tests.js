@@ -680,7 +680,7 @@ QUnit.test("Test calculatePipDistance", function ( assert ) {
     assert.ok(pipDistance === 31, "Pips calculated correctly for EURUSD: " + pipDistance);
 
     pipDistance = tradable.calculatePipDistance("EURUSD", 1.13883, 1.13571);
-    assert.ok(pipDistance === 31.2, "Pips calculated correctly for EURUSD from to reversed: " + pipDistance);
+    assert.ok(pipDistance === -31.2, "Pips calculated correctly for EURUSD from to reversed: " + pipDistance);
 
     pipDistance = tradable.calculatePipDistance("GER30", 1026.16, 1028.24);
     assert.ok(pipDistance === 2.1, "Pips calculated correctly for GER30 0 precision: " + pipDistance);
@@ -691,7 +691,7 @@ QUnit.test("Test calculateExpectedProfitOrLoss", function ( assert ) {
     assert.ok(expectedProfit === 25, "Expected profit should be 25: " + expectedProfit);
 
     // Some pipValues are a bit more funky like USDCAD 0.00007832540288629111 - let's see if rounding works
-    expectedProfit = tradable.calculateExpectedProfitOrLoss(10000, 25, 0.00007832540288629111);
+    expectedProfit = tradable.calculateExpectedProfitOrLoss(-10000, -25, 0.00007832540288629111);
     assert.ok(expectedProfit === 19.58, "Expected profit should be 19.58: " + expectedProfit);
 });
 
