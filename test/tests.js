@@ -671,6 +671,16 @@ QUnit.test("Test calculatePositionSize, calculatePositionSizeForRiskPercentage a
     assert.ok((posSizeMoney % instrument.minAmount) === 0, "Position size is multiple of minAmount " + posSizeMoney + ", miAmt: " + instrument.minAmount);
 });
 
+QUnit.test("Test getDecimalQty(amount)", function ( assert ) {
+    assert.ok(tradable.testhook.getDecimalQty("10") === 0, "Invalid number returns 0 decimals");
+    assert.ok(tradable.testhook.getDecimalQty(10) === 0, "Number returns 0 decimals");
+    assert.ok(tradable.testhook.getDecimalQty(0.1) === 1, "10.1 returns 1 decimal");
+    assert.ok(tradable.testhook.getDecimalQty(10.36) === 2, "10.21 returns 2 decimals");
+    assert.ok(tradable.testhook.getDecimalQty(100000.213) === 3, "100000.213 returns 3 decimals");
+    assert.ok(tradable.testhook.getDecimalQty(NaN) === 0, "Number returns 0 decimals");
+    assert.ok(tradable.testhook.getDecimalQty(null) === 0, "Number returns 0 decimals");
+});
+
 QUnit.test("Test calculatePipDistance", function ( assert ) {
     assert.throws(function () {
         tradable.calculatePipDistance("asdasdasd", 1.123, 1.12312)

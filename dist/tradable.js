@@ -637,11 +637,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var instrument = tradable.getInstrumentFromId(instrumentId);
             if(instrument.multipleOfMinAmount) {
                 positionSize = Math.floor(positionSize/instrument.minAmount) * instrument.minAmount;
+            } else {
+                var decimalQty = getDecimalQty(instrument.minAmount);
+                var roundTo = Math.pow(10, decimalQty);
+                positionSize = Math.floor(positionSize * roundTo) / roundTo;
             }
-
-            // Round off to two decimals
-            positionSize = Math.round(positionSize * 100) / 100;
-
             return positionSize;
         },
         /**
@@ -2277,6 +2277,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         var top = wTop + (window.innerHeight / 2) - (height / 2);
         return window.open(url, windowName, 'toolbar=no, titlebar=no, directories=no, status=no, menubar=no, ' +
             'scrollbars=no, resizable=no, copyhistory=no, width=' + width + ', height=' + height + ', top=' + top + ', left=' + left);
+    }
+
+    /*
+     * Returns the number of decimal digits in a number
+     * @param amount
+     * @returns {*}
+     */
+    function getDecimalQty(amount) {
+        if(typeof amount !== "number") {
+            return 0;
+        }
+        var decimalPart = String(amount).replace(",", ".").split(".")[1];
+        return (decimalPart) ? decimalPart.length : 0;
     }
 
     function initializeValuesForCurrentAccount(resolve, reject) {
