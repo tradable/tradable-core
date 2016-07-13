@@ -138,6 +138,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 url = url + "&broker_id=" + brokerId;
             }
 
+            if(type.toUpperCase() === "AUTHENTICATE" || type.toUpperCase() === "LOGIN") {
+                resetExcludedAccounts();
+            }
+
             if((typeof redirect !== "undefined" && redirect) || ie()) {
                 location.href = url;
             } else {
@@ -490,9 +494,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var index = tradable.accounts.indexOf(tradable.selectedAccount);
             if (index > -1) {
                 tradable.accounts.splice(index, 1);
+                delete tradable.accountMap[accountId];
+                tradable.accountIdsToExclude.push(accountId);
             }
-            delete tradable.accountMap[accountId];
-            tradable.accountIdsToExclude.push(accountId);
         },
         // Get Instrument
         /**
@@ -712,6 +716,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 resolve = externalId;
             }
 
+            resetExcludedAccounts();
             var apiAuthenticationRequest = {"appId": tradable.app_id, "brokerId": brokerId, "login": login, "password": password};
             if(typeof externalId === "string") {
                 apiAuthenticationRequest['externalId'] = externalId;
@@ -795,7 +800,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.accountMap = {};
                 $(data.accounts).each(function(index, account){
                    if (!!account.uniqueId && account.uniqueId !== "NA" &&
-                        tradable.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
+                       tradable.accountIdsToExclude.indexOf(account.uniqueId) <= -1){
                        tradable.accounts.push(account);
                        tradable.accountMap[account.uniqueId] = account;
                    }
@@ -2448,6 +2453,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         if(tradable.instrumentKeysForAccountUpdates.length) {
             tradable.instrumentKeysForAccountUpdates.splice(0, tradable.instrumentKeysForAccountUpdates.length);
         }
+    }
+
+    function resetExcludedAccounts() {
+        tradable.accountIdsToExclude.splice(0, tradable.accountIdsToExclude.length); // Reset excluded accounts
     }
 
     function excludeAndValidate(reject, err) {
