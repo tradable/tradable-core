@@ -569,6 +569,73 @@ QUnit.test( "Place, Modify Protected Order, Cancel TP and Cancel SL DISTANCE", f
     modifyProtectedOrder(assert, instrumentId, true);
 });
 
+QUnit.test("Test Execution listener", function ( assert ) {
+    assert.ok(!tradable.testhook.notifiedExecutions, "Notified executions undefined");
+
+    assert.ok(tradable.testhook.getItemId(fakeOrder("orderId", "LIMIT", 1000)) === "orderId", "Order id for executions caching is correct");
+    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 1000)) === "positionId1000", "Position id for executions caching is correct");
+    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 0, "lastModified")) === "positionIdlastModified", "Closed position id for executions caching is correct");
+
+    // Test initialization
+    var snapshot = fakeSnapshot(
+        [fakePosition("EURUSD-2", 1000), fakePosition("EURUSD-3", 2000)],
+        [fakePosition("EURUSD-1", 0, "today")],
+        [fakeOrder("10002131", "LIMIT", 1000), fakeOrder("24562131", "MARKET", 1000)], []
+    );
+
+    var foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
+    assert.ok(trEmbJQ.inArray("EURUSD-21000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 1 cached");
+    assert.ok(trEmbJQ.inArray("EURUSD-32000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 2 cached");
+    assert.ok(trEmbJQ.inArray("EURUSD-1today", tradable.testhook.notifiedExecutions.closedPositions) >= 0, "Snapshot closed position cached");
+    assert.ok(trEmbJQ.inArray("10002131", tradable.testhook.notifiedExecutions.orders) >= 0, "Snapshot valid order cached");
+    assert.ok(trEmbJQ.inArray("24562131", tradable.testhook.notifiedExecutions.orders) < 0, "Snapshot MARKET order not cached");
+
+    assert.ok(!foundExecutions.positions.length, "No new positions on initialization");
+    assert.ok(!foundExecutions.orders.length, "No new orders on initialization");
+    assert.ok(!foundExecutions.closedPositions.length, "No new closedPositions on initialization");
+    assert.ok(!foundExecutions.cancelledOrders.length, "No new cancelledOrders on initialization");
+
+    snapshot.positions.open = trEmbJQ.grep(snapshot.positions.open, function(n) {
+        return n.id !== "EURUSD-3";
+    });
+    snapshot.positions.open.push(fakePosition("EURUSD-3", 1000));
+    snapshot.positions.open.push(fakePosition("EURUSD-4", 1000));
+    foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
+
+    assert.ok(trEmbJQ.inArray("EURUSD-32000", tradable.testhook.notifiedExecutions.positions) < 0, "Old positions are properly cleared");
+    assert.ok(foundExecutions.positions.length === 2, "New positions found");
+
+    foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
+    assert.ok(!foundExecutions.positions.length, "No new positions on new identical snapshot");
+    assert.ok(!foundExecutions.orders.length, "No new orders on new identical snapshot");
+    assert.ok(!foundExecutions.closedPositions.length, "No new closedPositions on new identical snapshot");
+    assert.ok(!foundExecutions.cancelledOrders.length, "No new cancelledOrders on new identical snapshot");
+
+    tradable.testhook.resetNotifiedExecutions();
+    assert.ok(!tradable.testhook.notifiedExecutions, "Notified executions correctly reset");
+
+    function fakeSnapshot(open, recentlyClosed, pending, recentlyCancelled) {
+        return {
+            positions: { open: open, recentlyClosed: recentlyClosed },
+            orders : { pending: pending, recentlyCancelled: recentlyCancelled }
+        };
+    }
+    function fakePosition(id, amount, lastModified) {
+        return {
+            id: id,
+            amount: amount,
+            lastModified: lastModified
+        };
+    }
+    function fakeOrder(id, type, amount) {
+        return {
+            id: id,
+            type: type,
+            amount: amount
+        };
+    }
+});
+
 QUnit.test("Test On Off listener", function ( assert ) {
     assert.throws(function () {
         tradable.on("test", "invalidEvent", function () {});
@@ -586,6 +653,7 @@ QUnit.test("Test On Off listener", function ( assert ) {
     addRemoveListener("test", "accountUpdated");
     addRemoveListener("test", "tokenWillExpire");
     addRemoveListener("test", "reLoginRequired");
+    addRemoveListener("test", "execution");
 
     function addRemoveListener(namespace, listener) {
         // Add listener
@@ -597,9 +665,17 @@ QUnit.test("Test On Off listener", function ( assert ) {
             tradable.on(namespace, listener, function () {});
         }, "Repeated listener throws error");
 
-        // Remove listener
+        // Add second listener
+        var namespace2 = namespace + "2";
+        tradable.on(namespace2, listener, callback);
+
+        // Remove first listener
         tradable.off(namespace, listener);
         assert.ok(!tradable.testhook.callbackHolder[listener][namespace], "Callback is successfully turned off for " + listener);
+
+        // Remove second listener
+        tradable.off(namespace2, listener);
+        assert.ok(!tradable.testhook.callbackHolder[listener], "Listener was removed after no namespaces left for " + listener);
     }
 });
 
@@ -790,7 +866,7 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     var from = Date.now() - (1000 * 60 * 60 * 3); //3h
     var callbacks = 0;
     var candle;
-    tradable.startCandleUpdates("EURUSD", from, 30, function(data) {
+    tradable.startCandleUpdates("GBPUSD", from, 30, function(data) {
         if(callbacks > 0) {
             if(!!candle) {
                 assert.ok(JSON.stringify(data[0]) !== JSON.stringify(candle), "Second update is different from previous: " + JSON.stringify(data));
@@ -803,7 +879,7 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
                 assert.ok(candle.low <= candle.close, "Candle low lower or equal");
             }
         } else {
-            assert.ok(data.length > 5, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
+            assert.ok(data.length > 4, "30 min candles since 3h ago. More than 5 candles received: " + JSON.stringify(data));
         }
         callbacks++;
     });

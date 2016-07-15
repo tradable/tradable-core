@@ -30,7 +30,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var oauthEndpoint = formOAuthEndpoint(redirectUrl);
     var tokenObj = getTokenFromStorage();
 
-    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"];
+    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "execution", "error"];
     var callbackHolder = {};
     var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
         tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
@@ -207,15 +207,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
 
             switch(eventName) {
-                case "embedReady":
-                    tradable.initEmbedReady(callback);
-                    break;
-                case "accountUpdated":
-                    tradable.initAccountUpdated();
-                    break;
-                case "tokenWillExpire":
-                    tradable.initTokenWillExpire();
-                    break;
+                case "embedReady": tradable.initEmbedReady(callback); break;
+                case "accountUpdated": tradable.initAccountUpdates(); break;
+                case "tokenWillExpire": tradable.initTokenWillExpire(); break;
+                case "execution": tradable.initExecutions(); break;
             }
 
             callbackHolder[eventName][namespace] = callback;
@@ -230,14 +225,23 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         off : function(namespace, eventName) {
             if(typeof eventName === "undefined") {
                 for(var evtName in callbackHolder) {
-                    if(callbackHolder.hasOwnProperty(evtName)
-                        && namespace in callbackHolder[evtName]
-                        && callbackHolder[evtName].hasOwnProperty(namespace)) {
+                    if(callbackHolder.hasOwnProperty(evtName) &&
+                        namespace in callbackHolder[evtName] &&
+                        callbackHolder[evtName].hasOwnProperty(namespace)) {
                         delete callbackHolder[evtName][namespace];
                     }
                 }
             } else if(tradable.isEventValid(eventName) && !!callbackHolder[eventName] && (namespace in callbackHolder[eventName])) {
                 delete callbackHolder[eventName][namespace];
+            }
+            for(eventName in callbackHolder) {
+                if(callbackHolder.hasOwnProperty(eventName) && isEmpty(callbackHolder[eventName])) {
+                    delete callbackHolder[eventName];
+                    switch(eventName) {
+                        case "accountUpdated": tradable.stopAccountUpdates(); break;
+                        case "execution": tradable.stopExecutions(); break;
+                    }
+                }
             }
         },
         initEmbedReady : function(callback) {
@@ -259,9 +263,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
         },
         accountUpdateInterval: null,
-        initAccountUpdated : function() {
+        initAccountUpdates : function() {
             if(tradable.accountUpdateInterval === null) {
                 tradable.accountUpdateInterval = setInterval(processAccountUpdate, tradable.accountUpdateMillis);
+            }
+        },
+        stopAccountUpdates : function() {
+            if(!accountUpdatedCallbacks.length) {
+                clearInterval(tradable.accountUpdateInterval);
+                tradable.accountUpdateInterval = null;
             }
         },
         /**
@@ -271,7 +281,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         onAccountUpdated : function(callback) {
             if(callback && typeof callback === "function") {
-                tradable.initAccountUpdated();
+                tradable.initAccountUpdates();
                 var callbackHash = hashCode(callback.toString());
                 if($.inArray(callbackHash, accountUpdatedCallbackHashes) === -1) {
                     accountUpdatedCallbacks.push(callback);
@@ -395,6 +405,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 console.log("You need to authenticate before calling this method");
             }
             return (tradable.expirationTimeUTC - new Date().getTime());
+        },
+        listeningToExecutions: false,
+        initExecutions : function () {
+            if(!tradable.listeningToExecutions) {
+                tradable.on("internalExecutionsListener", "accountUpdated", findAndNotifyExecutions);
+                tradable.listeningToExecutions = true;
+            }
+        },
+        stopExecutions : function() {
+            tradable.off("internalExecutionsListener", "accountUpdated");
+            tradable.listeningToExecutions = false;
         },
         makeOsRequest : function (reqType, type, accountId, method, postData, resolve, reject){
             var version = (reqType === "internal") ? "" : "v1/";
@@ -2304,6 +2325,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         resetInstrumentCache();
+        resetNotifiedExecutions();
         return getDefaultInstruments().then(function() {
             console.log('Instruments ready');
             if(reset) {
@@ -2630,6 +2652,106 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     }
 
+    /*
+     * Notifies about new positions, new orders, closed positions and cancelled orders
+     */
+    var notifiedExecutions = undefined;
+    function findAndNotifyExecutions(snapshot) {
+        if(!notifiedExecutions) {
+            notifiedExecutions = new Execution();
+            notifiedExecutions.orders = collectNewExecutions(snapshot.orders.pending, "orders", true);
+            notifiedExecutions.cancelledOrders = collectNewExecutions(snapshot.orders.recentlyCancelled, "cancelledOrders", true);
+            notifiedExecutions.positions = collectNewExecutions(snapshot.positions.open, "positions", true);
+            notifiedExecutions.closedPositions = collectNewExecutions(snapshot.positions.recentlyClosed, "closedPositions", true);
+
+            //removeIf(production)
+            // Unit Test hook
+            tradable.testhook.notifiedExecutions = notifiedExecutions;
+            //endRemoveIf(production)
+        }
+        var exec = new Execution(
+            collectNewExecutions(snapshot.orders.pending, "orders"),
+            collectNewExecutions(snapshot.orders.recentlyCancelled, "cancelledOrders"),
+            collectNewExecutions(snapshot.positions.open, "positions"),
+            collectNewExecutions(snapshot.positions.recentlyClosed, "closedPositions")
+        );
+
+        if(exec.getTotal() > 0) {
+            notifyNamespaceCallbacks("execution", exec);
+        }
+
+        return exec;
+    }
+
+    function resetNotifiedExecutions() {
+        notifiedExecutions = undefined;
+
+        //removeIf(production)
+        // Unit Test hook
+        tradable.testhook.notifiedExecutions = notifiedExecutions;
+        //endRemoveIf(production)
+    }
+
+    function Execution(o, co, p, cp) {
+        this.orders = (o) ? o : [];
+        this.cancelledOrders = (co) ? co : [];
+        this.positions = (p) ? p : [];
+        this.closedPositions = (cp) ? cp : [];
+        this.getTotal = function() {
+            return this.orders.length + this.cancelledOrders.length +
+                this.positions.length + this.closedPositions.length;
+        }
+    }
+
+    function collectNewExecutions(executions, notifiedHolder, needToCollectId) {
+        var newExecutions = [];
+        for (var i = 0; i < executions.length; i++) {
+            var item = executions[i];
+
+            /*
+             * We use positionId+amount as id and clear previous Ids that contain the positionId
+             * when a new "positionId+amount" key is found
+             */
+            var itemId = getItemId(item);
+            if(needToClearPositions(notifiedHolder, item.id, itemId)) {
+                notifiedExecutions.positions = clearPositions(item.id, notifiedExecutions.positions);
+            }
+
+            if((!item.type || item.type !== "MARKET") && $.inArray(itemId, notifiedExecutions[notifiedHolder]) < 0) {
+                newExecutions.push((needToCollectId) ? itemId : item);
+                notifiedExecutions[notifiedHolder].push(itemId);
+            }
+        }
+        return newExecutions;
+    }
+
+    function needToClearPositions(notifiedHolder, positionIdFractionToRemove, positionId) {
+        var needToRemove = false;
+        if((notifiedHolder === "positions" || notifiedHolder === "closedPositions") &&
+                $.inArray(positionId, notifiedExecutions[notifiedHolder]) < 0) {
+            $(notifiedExecutions.positions).each(function(idx, val) {
+                if(val.indexOf(positionIdFractionToRemove) > -1) {
+                    needToRemove = true;
+                }
+            });
+        }
+        return needToRemove;
+    }
+
+    function clearPositions(positionIdFractionToRemove, notified) {
+        return $.grep(notified, function(n) {
+            return n.indexOf(positionIdFractionToRemove) < 0;
+        });
+    }
+
+    /*
+     * The position id for open positions is 'id+amount' / For closed positions 'id+lastModified'
+     * For orders it's just the order id
+     */
+    function getItemId(item) {
+        return item.id + ((!item.type) ? ((item.amount !== 0) ? item.amount : item.lastModified) : "");
+    }
+
     function resolveDeferred(deferred, resolve, reject) {
         if(!!resolve || !!reject){
             return deferred.then(function(data){
@@ -2679,6 +2801,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return ((navigator.userAgent.indexOf("MSIE") !== -1) || (/rv:11.0/i.test(navigator.userAgent)));
     }
 
+    // Checks if an object has no properties
+    function isEmpty(map) {
+        for(var key in map) {
+            if (map.hasOwnProperty(key)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     //removeIf(production)
     // Unit Test hook
     tradable.testhook = {};
@@ -2688,6 +2820,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.testhook.getTokenValuesFromHashFragment = getTokenValuesFromHashFragment;
     tradable.testhook.validateToken = validateToken;
     tradable.testhook.getDecimalQty = getDecimalQty;
+    tradable.testhook.findAndNotifyExecutions = findAndNotifyExecutions;
+    tradable.testhook.Execution = Execution;
+    tradable.testhook.resetNotifiedExecutions = resetNotifiedExecutions;
+    tradable.testhook.collectNewExecutions = collectNewExecutions;
+    tradable.testhook.needToClearPositions = needToClearPositions;
+    tradable.testhook.clearPositions = clearPositions;
+    tradable.testhook.getItemId = getItemId;
     //endRemoveIf(production) 
     
     // Global
