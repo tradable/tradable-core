@@ -2745,11 +2745,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     /*
-     * The position id for open positions is 'id+amount' / For closed positions 'id+lastModified'
+     * The position id for open positions is 'id+side+amount' / For closed positions 'id+lastModified'
      * For orders it's just the order id
      */
     function getItemId(item) {
-        return item.id + ((!item.type) ? ((item.amount !== 0) ? item.amount : item.lastModified) : "");
+        return item.id + ((!item.type) ? ((item.amount !== 0) ? (item.side + item.amount) : item.lastModified) : "");
     }
 
     function resolveDeferred(deferred, resolve, reject) {

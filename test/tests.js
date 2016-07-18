@@ -570,22 +570,28 @@ QUnit.test( "Place, Modify Protected Order, Cancel TP and Cancel SL DISTANCE", f
 });
 
 QUnit.test("Test Execution listener", function ( assert ) {
+    assert.ok(tradable.accountUpdateInterval === null, "Account updates not started..");
+    tradable.on("testListener", "execution", function() {});
+    assert.ok(tradable.accountUpdateInterval !== null, "Account updates started after adding execution listener");
+    tradable.off("testListener", "execution");
+    assert.ok(tradable.accountUpdateInterval === null, "Account updates stopped after removing execution listener");
+
     assert.ok(!tradable.testhook.notifiedExecutions, "Notified executions undefined");
 
     assert.ok(tradable.testhook.getItemId(fakeOrder("orderId", "LIMIT", 1000)) === "orderId", "Order id for executions caching is correct");
-    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 1000)) === "positionId1000", "Position id for executions caching is correct");
-    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 0, "lastModified")) === "positionIdlastModified", "Closed position id for executions caching is correct");
+    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 1000, "today", "BUY")) === "positionIdBUY1000", "Position id for executions caching is correct");
+    assert.ok(tradable.testhook.getItemId(fakePosition("positionId", 0, "lastModified", "BUY")) === "positionIdlastModified", "Closed position id for executions caching is correct");
 
     // Test initialization
     var snapshot = fakeSnapshot(
-        [fakePosition("EURUSD-2", 1000), fakePosition("EURUSD-3", 2000)],
-        [fakePosition("EURUSD-1", 0, "today")],
+        [fakePosition("EURUSD-2", 1000, "today", "BUY"), fakePosition("EURUSD-3", 2000, "today", "BUY")],
+        [fakePosition("EURUSD-1", 0, "today", "BUY")],
         [fakeOrder("10002131", "LIMIT", 1000), fakeOrder("24562131", "MARKET", 1000)], []
     );
 
     var foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
-    assert.ok(trEmbJQ.inArray("EURUSD-21000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 1 cached");
-    assert.ok(trEmbJQ.inArray("EURUSD-32000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 2 cached");
+    assert.ok(trEmbJQ.inArray("EURUSD-2BUY1000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 1 cached");
+    assert.ok(trEmbJQ.inArray("EURUSD-3BUY2000", tradable.testhook.notifiedExecutions.positions) >= 0, "Snapshot position 2 cached");
     assert.ok(trEmbJQ.inArray("EURUSD-1today", tradable.testhook.notifiedExecutions.closedPositions) >= 0, "Snapshot closed position cached");
     assert.ok(trEmbJQ.inArray("10002131", tradable.testhook.notifiedExecutions.orders) >= 0, "Snapshot valid order cached");
     assert.ok(trEmbJQ.inArray("24562131", tradable.testhook.notifiedExecutions.orders) < 0, "Snapshot MARKET order not cached");
@@ -598,11 +604,11 @@ QUnit.test("Test Execution listener", function ( assert ) {
     snapshot.positions.open = trEmbJQ.grep(snapshot.positions.open, function(n) {
         return n.id !== "EURUSD-3";
     });
-    snapshot.positions.open.push(fakePosition("EURUSD-3", 1000));
-    snapshot.positions.open.push(fakePosition("EURUSD-4", 1000));
+    snapshot.positions.open.push(fakePosition("EURUSD-3", 1000, "today", "BUY"));
+    snapshot.positions.open.push(fakePosition("EURUSD-4", 1000, "today", "BUY"));
     foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
 
-    assert.ok(trEmbJQ.inArray("EURUSD-32000", tradable.testhook.notifiedExecutions.positions) < 0, "Old positions are properly cleared");
+    assert.ok(trEmbJQ.inArray("EURUSD-3BUY2000", tradable.testhook.notifiedExecutions.positions) < 0, "Old positions are properly cleared");
     assert.ok(foundExecutions.positions.length === 2, "New positions found");
 
     foundExecutions = tradable.testhook.findAndNotifyExecutions(snapshot);
@@ -620,11 +626,12 @@ QUnit.test("Test Execution listener", function ( assert ) {
             orders : { pending: pending, recentlyCancelled: recentlyCancelled }
         };
     }
-    function fakePosition(id, amount, lastModified) {
+    function fakePosition(id, amount, lastModified, side) {
         return {
             id: id,
             amount: amount,
-            lastModified: lastModified
+            lastModified: lastModified,
+            side: side
         };
     }
     function fakeOrder(id, type, amount) {
