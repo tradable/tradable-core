@@ -2325,7 +2325,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         resetInstrumentCache();
-        resetNotifiedExecutions();
         return getDefaultInstruments().then(function() {
             console.log('Instruments ready');
             if(reset) {
@@ -2556,7 +2555,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     var processingUpdate = false;
     function processAccountUpdate() {
-        if(tradable.tradingEnabled && !processingUpdate &&
+        if(tradable.tradingEnabled && !tradable.initializingAccount && !processingUpdate &&
             (accountUpdatedCallbacks.length > 0 || typeof callbackHolder["accountUpdated"] !== undefined)) {
             processingUpdate = true;
             var instrumentIds = [];
@@ -2570,10 +2569,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.lastSnapshot = account;
                 return checkInstrumentsToCache(account);
             }).then(function(account) {
-                $.each(accountUpdatedCallbacks, function(idx, call) {
-                    call(account);
-                });
-                notifyNamespaceCallbacks("accountUpdated", account);
+                if(tradable.tradingEnabled && !tradable.initializingAccount) {
+                    $.each(accountUpdatedCallbacks, function(idx, call) {
+                        call(account);
+                    });
+                    notifyNamespaceCallbacks("accountUpdated", account);
+                }
                 processingUpdate = false;
             }, function() {
                 processingUpdate = false;
@@ -2655,15 +2656,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     /*
      * Notifies about new positions, new orders, closed positions and cancelled orders
      */
+    var initializedAccountId = undefined;
     var notifiedExecutions = undefined;
     function findAndNotifyExecutions(snapshot) {
+        if(tradable.selectedAccount.uniqueId !== initializedAccountId) {
+            resetNotifiedExecutions();
+            initializedAccountId = tradable.selectedAccount.uniqueId;
+        }
         if(!notifiedExecutions) {
             notifiedExecutions = new Execution();
             notifiedExecutions.orders = collectNewExecutions(snapshot.orders.pending, "orders", true);
             notifiedExecutions.cancelledOrders = collectNewExecutions(snapshot.orders.recentlyCancelled, "cancelledOrders", true);
             notifiedExecutions.positions = collectNewExecutions(snapshot.positions.open, "positions", true);
             notifiedExecutions.closedPositions = collectNewExecutions(snapshot.positions.recentlyClosed, "closedPositions", true);
-
             //removeIf(production)
             // Unit Test hook
             tradable.testhook.notifiedExecutions = notifiedExecutions;
@@ -2685,7 +2690,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function resetNotifiedExecutions() {
         notifiedExecutions = undefined;
-
         //removeIf(production)
         // Unit Test hook
         tradable.testhook.notifiedExecutions = notifiedExecutions;
