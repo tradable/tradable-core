@@ -656,6 +656,7 @@ QUnit.test("Test On Off listener", function ( assert ) {
         tradable.on("testNullCallback", "embedReady", null);
     }, "Invalid callback throws error");
 
+    addRemoveListener("test", "embedStarting");
     addRemoveListener("test", "embedReady");
     addRemoveListener("test", "accountUpdated");
     addRemoveListener("test", "tokenWillExpire");

@@ -30,7 +30,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var oauthEndpoint = formOAuthEndpoint(redirectUrl);
     var tokenObj = getTokenFromStorage();
 
-    var availableEvents = ["embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "execution", "error"];
+    var availableEvents = ["embedStarting", "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "execution", "error"];
     var callbackHolder = {};
     var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
         tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
@@ -499,6 +499,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         });
                     } else if(err.status === 502 || err.status === 500 || err.status === 403) {
                         excludeAndValidate(reject, err);
+                    } else if(reject) {
+                        reject(err);
                     }
                     tradable.initializingAccount = false;
                 });
@@ -2114,6 +2116,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var deferred = new $.Deferred();
 
             console.log("Enabling Trading...");
+            notifyNamespaceCallbacks("embedStarting");
+
             tradable.tradingEnabled = false;
             tradable.lastSnapshot = undefined;
 
