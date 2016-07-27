@@ -719,7 +719,14 @@ QUnit.test("Test onAccountUpdated", function ( assert ) {
     tradable.setAccountUpdateFrequencyMillis(100000000);
 });
 
-QUnit.test("Test calculatePositionSize, calculatePositionSizeForRiskPercentage and calculatePositionSizeForRiskAmount", function ( assert ) {
+QUnit.test("Test calculatePipSize, calculatePositionSize, calculatePositionSizeForRiskPercentage and calculatePositionSizeForRiskAmount", function ( assert ) {
+    assert.throws(function () {
+        tradable.calculatePipSize("adfasdfasdf");
+    }, "Invalid instrument to calculatePipSize throws error.");
+    assert.ok(tradable.calculatePipSize("EURUSD") === 0.0001, "Pip size correctly calculated for EURUSD");
+    assert.ok(tradable.calculatePipSize("USOil") === 0.01, "Pip size correctly calculated for USOil");
+    assert.ok(tradable.calculatePipSize("GER30") === 1, "Pip size correctly calculated for GER30");
+
     assert.throws(function () {
         tradable.calculatePositionSize(1000, false, 25, 1.15);
     }, "Invalid risk and riskIsMoney combination fails.");

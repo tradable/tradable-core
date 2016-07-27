@@ -177,7 +177,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Add an event listener with an specific name that can be turned off calling 'off'.
          * @param      {String} namespace    A unique name that will identify your listener and that you will have to use to turn the listener off 
-         * @param      {String} eventName   The available events are "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"
+         * @param      {String} eventName   The available events are "embedStarting", "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"
          * @param      {Function} callback  Event listener callback function
          * @example
          * tradable.on("yourCustomNamespace", "accountUpdated", function(snapshot) {
@@ -573,8 +573,24 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
+         * Calculates the pip size for an instrument
+         * @param instrumentId The instrument id to calculate the pip size
+         * @returns {number}
+         * @example
+         * // In the following example the pip size would be 0.0001
+         * var pipSize = tradable.calculatePipDistance("EURUSD");
+         */
+        calculatePipSize : function(instrumentId) {
+            var instrument = tradable.getInstrumentFromId(instrumentId);
+            if(!instrument) {
+                throw "Instrument not found for the given instrumentId: " + instrumentId;
+            }
+            var pipPrec = instrument.pipPrecision;
+            return (pipPrec > 0) ? (1 / (Math.pow(10, pipPrec))) : 1;
+        },
+        /**
          * Calculates the distance in Pips/Points between prices.
-         * @param {String} instrumentId The instrument id to calculate the position size
+         * @param {String} instrumentId The instrument id to calculate the distance
          * @param {number} priceFrom Price to calculate the distance from (opening price, 'openPrice' for a position or price for an 'order')
          * @param {number} priceTo Price to calculate the distance to (closing price or protection price)
          * @returns {number} The pip/point distance (can return a negative value if from > to)
