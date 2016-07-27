@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.19.3/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.20/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}"></script>
 ```
 
@@ -147,33 +147,32 @@ tradable.off("myAccountUpdateListener", "accountUpdated");
 
 In addition to the mentioned events, these are the rest of the events that should be handled by the UI to deliver a nice experience:
 
-[//]: # (Comment out when version 1.20.0 is released)
-[//]: # (###### Starting)
+###### Starting
 
-[//]: # (The `embedStarting` event is fired when tradable core receives a token either from the OAuth flow or direct authentication and before the account is initialized. This is useful if you want to have a loading indication that trading is being enabled, this loading indication should start when this listener is called and stopped with the embedReady event.)
+The `embedStarting` event is fired when tradable core receives a token either from the OAuth flow or direct authentication and before the account is initialized. This is useful if you want to have a loading indication that trading is being enabled, this loading indication should start when this listener is called and stopped with the `embedReady` event.
 
-[//]: # (```javascript)
-[//]: # (tradable.on("myStartListener", "embedStarting", function() {});)
-[//]: # (```)
+```javascript
+tradable.on("myStartListener", "embedStarting", function() {});
+```
 
-[//]: # (###### Executions)
+###### Executions
 
-[//]: # (The execution listener provides an easy way to listen for new positions, changes in positions (amount or side), new orders, closed positions and cancelled orders. Every time that any of those happens, the listener will be called with an object that provides the new executions.)
+The `execution` listener provides an easy way to listen for new positions, changes in positions (amount or side), new orders, closed positions and cancelled orders. Every time that any of those happens, the listener will be called with an object that provides the new executions.
 
-[//]: # (```javascript)
-[//]: # (tradable.on("myNotificationService", "execution", function(execution) {});)
-[//]: # (```)
+```javascript
+tradable.on("myNotificationService", "execution", function(execution) {});
+```
 
-[//]: # (The `execution` object looks like this:)
+The `execution` object looks like this:
 
-[//]: # (```javascript)
-[//]: # ({)
-[//]: # (    orders: [...],)
-[//]: # (    cancelledOrders: [...],)
-[//]: # (    positions: [...],)
-[//]: # (    closedPositions: [...])
-[//]: # (})
-[//]: # (```)
+```javascript
+{
+    orders: [...],
+    cancelledOrders: [...],
+    positions: [...],
+    closedPositions: [...]
+}
+```
 
 ###### Token expiration
 
@@ -223,8 +222,7 @@ Tradable Core provides a few helper methods to perform different calculations:
 - [calculatePositionSizeForRiskAmount](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSizeForRiskAmount): Calculates a position size for an instrument out of a given amount willing to risk.
 - [calculatePositionSizeForRiskPercentage](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSizeForRiskPercentage): Calculates a position size for an instrument out of a given equity percentage willing to risk.
 - [calculateExpectedProfitOrLoss](https://tradable.github.io/js/docs/index.html#tradable.calculateExpectedProfitOrLoss): Calculates the resulting equity profit or loss for a position size if a take profit or stop loss at a Pips/Points distance is hit.
-
-[//]: # (- calculatePipSize https://tradable.github.io/js/docs/index.html#tradable.calculatePipSize): Calculates the pip size for an instrument.)
+- [calculatePipSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePipSize): Calculates the pip size for an instrument.
 
 ### Light integration
 
