@@ -1,0 +1,25 @@
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
+
+# Node
+/node_modules/
+
+# tradable-core
+/docs/assets/
+/docs/index.html
+/test/coverage/prettify.css
+/test/coverage/prettify.js
+/test/coverage/sort-arrow-sprite.png
+/test/coverage/sorter.js
+/test/coverage/base.css
+/test/coverage/index.html

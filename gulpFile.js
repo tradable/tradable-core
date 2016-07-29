@@ -20,7 +20,7 @@ gulp.task('test', function() {
       reporter: 'Spec',
       coverage: {
           dir: 'test/coverage',
-          reporters: ['lcovonly', 'text', 'html'],
+          reporters: ['lcovonly'],
           ignore: ['node_modules', 'tests.js', 'dist']
       }
     });
