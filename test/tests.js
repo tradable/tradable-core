@@ -154,6 +154,7 @@ QUnit.test( "User, AppInfo and Brokers", function( assert ) {
     var done = assert.async();
     tradable.getUser().then(function () {
         QUnit.pushFailure( "User should have failed" );
+        done();
     }, function () {
         assert.ok(true, "getUser");
         return tradable.getAppInfo();
@@ -556,6 +557,7 @@ function modifyProtectedOrder(assert, instrumentId, checkTPSL) {
         done();
     }, function (error) {
         QUnit.pushFailure(JSON.stringify(error.responseJSON));
+        done();
     });
 }
 
@@ -684,6 +686,18 @@ QUnit.test("Test On Off listener", function ( assert ) {
         // Remove second listener
         tradable.off(namespace2, listener);
         assert.ok(!tradable.testhook.callbackHolder[listener], "Listener was removed after no namespaces left for " + listener);
+
+        // Add faulty callback and make sure it does not crash the notifier
+        tradable.on("someNamespace", listener, function() {
+            throw "Some exception";
+        });
+        var executed = 0;
+        tradable.on("someNamespace2", listener, function() {
+            executed = 1;
+        });
+        tradable.testhook.notifyNamespaceCallbacks(listener);
+
+        assert.ok(executed === 1, listener + " callback that throws exception does not crash the notifier");
     }
 });
 

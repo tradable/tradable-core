@@ -1,4 +1,4 @@
-var versionNumber = '1.20';
+var versionNumber = '1.20.1';
 
 var gulp = require('gulp'),
     rename = require('gulp-rename'),
@@ -20,7 +20,7 @@ gulp.task('test', function() {
       reporter: 'Spec',
       coverage: {
           dir: 'test/coverage',
-          reporters: ['lcovonly'],
+          reporters: ['lcovonly', 'text'],
           ignore: ['node_modules', 'tests.js', 'dist']
       }
     });

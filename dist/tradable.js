@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.20  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.20.1  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -44,7 +44,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.20',
+        version : '1.20.1',
         app_id: appId,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
@@ -247,7 +247,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         initEmbedReady : function(callback) {
             if(tradable.notifiedCallbacks) {
-                return callback();
+                try{ callback(); } catch(err) { console.error(err); }
             }
         },
         /**
@@ -428,7 +428,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else if(tradable.accountMap[accountId]) {
                 endpoint = tradable.accountMap[accountId].endpointURL;
             } else {
-                console.info("Please specify a valid accountId or method");
+                console.warn("Please specify a valid accountId or method");
+                var wrongRequestDeferred = new $.Deferred().reject("Invalid request: Please specify a valid accountId or method");
+                return resolveDeferred(wrongRequestDeferred, resolve, reject);
             }
             var ajaxPromise = $.ajax({
                 type: type,
@@ -2568,7 +2570,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function notifyReadyCallbacks() {
         $(tradable.readyCallbacks).each(function(index, callback) {
-            callback();
+            try { callback(); } catch(err) { console.error(err); }
         });
         notifyNamespaceCallbacks("embedReady");
         tradable.notifiedCallbacks = true;
@@ -2592,7 +2594,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }).then(function(account) {
                 if(tradable.tradingEnabled && !tradable.initializingAccount) {
                     $.each(accountUpdatedCallbacks, function(idx, call) {
-                        call(account);
+                        try { call(account); } catch(err) { console.error(err); }
                     });
                     notifyNamespaceCallbacks("accountUpdated", account);
                 }
@@ -2632,21 +2634,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function notifyTokenExpired() {
         setTradingEnabled(false);
         $(tokenExpirationCallbacks).each(function(index, callback) {
-            callback();
+            try { callback(); } catch(err) { console.error(err); }
         });
         notifyNamespaceCallbacks("tokenExpired");
     }
 
     function notifyErrorCallbacks(error) {
         $(errorCallbacks).each(function(index, callback) {
-            callback(error);
+            try { callback(error); } catch(err) { console.error(err); }
         });
         notifyNamespaceCallbacks("error", error);
     }
 
     function notifyAccountSwitchCallbacks() {
         $(accountSwitchCallbacks).each(function(index, callback) {
-            callback();
+            try { callback(); } catch(err) { console.error(err); }
         });
         notifyNamespaceCallbacks("accountSwitch");
     }
@@ -2661,10 +2663,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(typeof callbackHolder[eventName] !== undefined) {
                 for(var namespace in callbackHolder[eventName]) {
                     if(callbackHolder[eventName].hasOwnProperty(namespace)) {
-                        if(typeof data !== "undefined") {
-                            callbackHolder[eventName][namespace](data);
-                        } else {
-                            callbackHolder[eventName][namespace]();
+                        try {
+                            if(typeof data !== "undefined") {
+                                callbackHolder[eventName][namespace](data);
+                            } else {
+                                callbackHolder[eventName][namespace]();
+                            }
+                        } catch(err) {
+                            console.error(err);
                         }
                     }
                 }

@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.20/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.20.1/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}"></script>
 ```
 
