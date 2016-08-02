@@ -247,7 +247,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         initEmbedReady : function(callback) {
             if(tradable.notifiedCallbacks) {
-                try{ callback(); } catch(err) { console.error(err); }
+                return executeCallback(callback);
             }
         },
         /**
@@ -2570,7 +2570,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function notifyReadyCallbacks() {
         $(tradable.readyCallbacks).each(function(index, callback) {
-            try { callback(); } catch(err) { console.error(err); }
+            executeCallback(callback);
         });
         notifyNamespaceCallbacks("embedReady");
         tradable.notifiedCallbacks = true;
@@ -2594,7 +2594,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }).then(function(account) {
                 if(tradable.tradingEnabled && !tradable.initializingAccount) {
                     $.each(accountUpdatedCallbacks, function(idx, call) {
-                        try { call(account); } catch(err) { console.error(err); }
+                        executeCallback(call, account);
                     });
                     notifyNamespaceCallbacks("accountUpdated", account);
                 }
@@ -2634,21 +2634,21 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function notifyTokenExpired() {
         setTradingEnabled(false);
         $(tokenExpirationCallbacks).each(function(index, callback) {
-            try { callback(); } catch(err) { console.error(err); }
+            executeCallback(callback);
         });
         notifyNamespaceCallbacks("tokenExpired");
     }
 
     function notifyErrorCallbacks(error) {
         $(errorCallbacks).each(function(index, callback) {
-            try { callback(error); } catch(err) { console.error(err); }
+            executeCallback(callback, error);
         });
         notifyNamespaceCallbacks("error", error);
     }
 
     function notifyAccountSwitchCallbacks() {
         $(accountSwitchCallbacks).each(function(index, callback) {
-            try { callback(); } catch(err) { console.error(err); }
+            executeCallback(callback);
         });
         notifyNamespaceCallbacks("accountSwitch");
     }
@@ -2663,15 +2663,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(typeof callbackHolder[eventName] !== undefined) {
                 for(var namespace in callbackHolder[eventName]) {
                     if(callbackHolder[eventName].hasOwnProperty(namespace)) {
-                        try {
-                            if(typeof data !== "undefined") {
-                                callbackHolder[eventName][namespace](data);
-                            } else {
-                                callbackHolder[eventName][namespace]();
-                            }
-                        } catch(err) {
-                            console.error(err);
-                        }
+                        executeCallback(callbackHolder[eventName][namespace], data);
                     }
                 }
             }
@@ -2680,11 +2672,23 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     }
 
+    function executeCallback(callback, data) {
+        try {
+            if(typeof data !== "undefined") {
+                callback(data);
+            } else {
+                callback();
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
     /*
      * Notifies about new positions, new orders, closed positions and cancelled orders
      */
-    var initializedAccountId = undefined;
-    var notifiedExecutions = undefined;
+    var initializedAccountId;
+    var notifiedExecutions;
     function findAndNotifyExecutions(snapshot) {
         if(tradable.selectedAccount.uniqueId !== initializedAccountId) {
             resetNotifiedExecutions();
