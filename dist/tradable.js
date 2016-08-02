@@ -2674,11 +2674,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function executeCallback(callback, data) {
         try {
-            if(typeof data !== "undefined") {
-                callback(data);
-            } else {
-                callback();
+            if(data) {
+                return callback(data);
             }
+            callback();
         } catch(err) {
             console.error(err);
         }
