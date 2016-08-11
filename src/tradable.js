@@ -736,7 +736,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getBrokers : function (resolve, reject) {
             return tradable.makeOsRequest("brokers", "GET", "", "", null, resolve, reject);
         },
-        APP_KEY_MISSING : "Please specify your 'appKey' in the tradable config object or the the 'data-app-key' attribute in the tradable core script tag.",
+        APP_KEY_MISSING : "Please specify your 'appKey' in the tradable config object or the 'data-app-key' attribute in the tradable core script tag.",
         //v1/authenticate
         /**
          * Gets a token granting access to the account(s) associated with the given login and enables trading
