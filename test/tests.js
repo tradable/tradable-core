@@ -19,6 +19,7 @@ QUnit.test( "jQuery min version check", function( assert ) {
 QUnit.test( "Test tradableConfig object initialization", function( assert ) {
   assert.ok( tradable.testhook, "Tradable test hook is available" );
   var appId = "100010";
+  var appKey = "ykuNlWoQRC";
   var scriptId = "#tradable";
   var redirectURI = "redirectURI";
   var customOAuthHost = "customOAuthHost";
@@ -40,12 +41,12 @@ QUnit.test( "Test tradableConfig object initialization", function( assert ) {
 
   resetConfig(scriptId);
 
-  window.tradableEmbedConfig = { 'appId': appId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+  window.tradableEmbedConfig = { 'appId': appId, 'appKey': appKey, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
   testConfig("tradableEmbedConfig object");
 
   resetConfig(scriptId);
 
-  window.tradableConfig = { 'appId': appId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+  window.tradableConfig = { 'appId': appId, 'appKey': appKey, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
   testConfig("tradableConfig object");
 
 
@@ -57,6 +58,7 @@ QUnit.test( "Test tradableConfig object initialization", function( assert ) {
   function testConfig(text) {
       var config = tradable.testhook.initializeTradableConfig();
       assert.ok( config.appId === appId, text + ": Tradable App Id correctly initialized" );
+      assert.ok( config.appKey === appKey, text + ": Tradable App Key correctly initialized" );
       assert.ok( config.customOAuthURL === customOAuthURL, text + ": customOAuthURL correctly initialized" );
       assert.ok( config.customOAuthHost === customOAuthHost, text + ": customOAuthHost correctly initialized" );
       assert.ok( config.redirectURI === redirectURI, text + ": redirectURI correctly initialized" );
@@ -67,6 +69,7 @@ QUnit.test( "Test tradableConfig object initialization", function( assert ) {
 
     if(scriptId) {
       trEmbJQ(scriptId).attr("data-app-id", "");
+      trEmbJQ(scriptId).attr("data-app-key", "");
       trEmbJQ(scriptId).attr("data-redirect-uri", "");
       trEmbJQ(scriptId).attr("data-custom-oauth-url", "");
       trEmbJQ(scriptId).attr("data-custom-oauth-host", "");
@@ -914,6 +917,21 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     });
 });
 
+QUnit.test( "Create demo account without appKey throws error", function( assert ) {
+    var appKey = tradable.app_key;
+    tradable.app_key = undefined;
+
+    assert.throws(function () {
+        tradable.createForexDemoAccount();
+    }, "createForexDemoAccount without appKey breaks");
+
+    assert.throws(function () {
+        tradable.createStocksDemoAccount();
+    }, "createStocksDemoAccount without appKey breaks");
+
+    tradable.app_key = appKey;
+});
+
 QUnit.test( "Authenticate with City Index test account", function( assert ) {
     var done = assert.async();
     authenticateWithCredentials(done, assert, "DM806405", "trade123", 12);
@@ -971,6 +989,14 @@ function authenticateWithCredentials(done, assert, login, pass, brokerId, extern
         QUnit.pushFailure(JSON.stringify((err.responseJSON) ? err.responseJSON : err));
         done();
     };
+
+    var appKey = tradable.app_key;
+    tradable.app_key = undefined;
+    assert.throws(function () {
+        tradable.authenticateWithCredentials(brokerId, login, pass, resolve, reject);
+    }, "Authentication without appKey breaks");
+    tradable.app_key = appKey;
+
     if(externalId) {
         tradable.authenticateWithCredentials(brokerId, login, pass, externalId, resolve, reject);
     } else {
@@ -1005,6 +1031,7 @@ function getIdentificationToken(type) {
     getAnonymousId().then(function(data) {
         var anonId = data.id;
         var demoAPIAuthenticationRequest = {"appId": tradable.app_id, "type": type, "userIdentification": anonId};
+
         tradable.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(token) {
             deferred.resolve(token);
         }, function(err) {

@@ -28,8 +28,8 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.20.1/tradable.min.js" type="text/javascript" 
-        id="tradable" data-app-id="{your_app_id}"></script>
+<script src="//js-api.tradable.com/core/1.20.2/tradable.min.js" type="text/javascript" 
+        id="tradable" data-app-id="{your_app_id}" data-app-key="{your_app_key}"></script>
 ```
 
 ##### Option 2 - Include our [npm module](https://www.npmjs.com/package/tradable-core)
@@ -43,7 +43,7 @@ If you decide to go with this approach, you will need to specify the configurati
 
 ```javascript
 jQuery = require("jquery");
-tradableConfig = {"appId": your-app-id};
+tradableConfig = {"appId": your-app-id, "appKey": your-app-key};
 tradable = require("tradable-core");
 //$ = trEmbJQ; // Uncomment if you want to use our jQuery version
 ```

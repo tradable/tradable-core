@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.20.1  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.20.2  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -27,6 +27,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     global.tradableConfig = initializeTradableConfig();
 
     var appId = tradableConfig.appId;
+    var appKey = tradableConfig.appKey;
     var redirectUrl = getRedirectUrl();
     var oauthEndpoint = formOAuthEndpoint(redirectUrl);
     var tokenObj = getTokenFromStorage();
@@ -44,8 +45,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.20.1',
+        version : '1.20.2',
         app_id: appId,
+        app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
         login_loc : oauthEndpoint.oauthURL + '&showLogin=true',
@@ -735,6 +737,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         getBrokers : function (resolve, reject) {
             return tradable.makeOsRequest("brokers", "GET", "", "", null, resolve, reject);
         },
+        APP_KEY_MISSING : "Please specify your 'appKey' in the tradable config object or the the 'data-app-key' attribute in the tradable core script tag.",
         //v1/authenticate
         /**
          * Gets a token granting access to the account(s) associated with the given login and enables trading
@@ -759,6 +762,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             resetExcludedAccounts();
             var apiAuthenticationRequest = {"appId": tradable.app_id, "brokerId": brokerId, "login": login, "password": password};
+            if(tradable.app_key) {
+                apiAuthenticationRequest['appKey'] = tradable.app_key;
+            } else {
+                throw tradable.APP_KEY_MISSING;
+            }
             if(typeof externalId === "string") {
                 apiAuthenticationRequest['externalId'] = externalId;
             }
@@ -771,6 +779,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var deferred = new $.Deferred();
 
             var demoAPIAuthenticationRequest = {"appId": tradable.app_id, "type": type};
+            if(tradable.app_key) {
+                demoAPIAuthenticationRequest['appKey'] = tradable.app_key;
+            } else {
+                throw tradable.APP_KEY_MISSING;
+            }
             tradable.makeAuthenticationRequest(deferred, "createDemoAccount", demoAPIAuthenticationRequest);
 
             return resolveDeferred(deferred, resolve, reject);
@@ -2245,6 +2258,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             config = {
                 appId : $(scriptId).attr("data-app-id"),
+                appKey : $(scriptId).attr("data-app-key"),
                 redirectURI : $(scriptId).attr("data-redirect-uri"),
                 customOAuthURL : $(scriptId).attr("data-custom-oauth-url"),
                 customOAuthHost : $(scriptId).attr("data-custom-oauth-host")
