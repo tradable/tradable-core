@@ -1030,7 +1030,7 @@ function getIdentificationToken(type) {
 
     getAnonymousId().then(function(data) {
         var anonId = data.id;
-        var demoAPIAuthenticationRequest = {"appId": tradable.app_id, "type": type, "userIdentification": anonId}; //TODO "appKey": tradable.app_key,
+        var demoAPIAuthenticationRequest = {"appId": tradable.app_id, "appKey": tradable.app_key, "type": type, "userIdentification": anonId};
 
         tradable.makeOsRequest("createDemoAccount", "POST", "", "", demoAPIAuthenticationRequest).then(function(token) {
             deferred.resolve(token);
