@@ -10,7 +10,7 @@ Documentation: https://tradable.github.io/js/docs/
 
 ## Getting Started
 
-These instructions will help you understand how to get started with Tradable Core.
+These instructions will help you understand how to get started with Tradable Core. But first things first, in order to be able to connect with our API we need to setup a developer account for you and provide you with an App ID and an App Key. The App ID and App Key identify your app for every request made from it. If you don't have them yet, [you can sign up here](https://tradable.com/signup).
 
 ### Prerequisities
 
