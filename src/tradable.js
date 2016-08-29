@@ -501,10 +501,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         }, function () {
                             excludeAndValidate(reject, err);
                         });
-                    } else if(err.status === 502 || err.status === 500 || err.status === 403) {
+                    } else {
                         excludeAndValidate(reject, err);
-                    } else if(reject) {
-                        reject(err);
                     }
                     tradable.initializingAccount = false;
                 });
@@ -2051,36 +2049,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 dataType: 'json'
             });
 
-            if(!!resolve || !!reject){
-                return ajaxPromise.then(function(data){
-                    if(typeof resolve === "function") {
-                        if(data.dailyClose) {
-                            return resolve(data.dailyClose);
-                        } else {
-                            return resolve(data);
-                        }
-                    }
-                }, function(jqXHR, message, error){
-                    if(typeof reject === "function")
-                        return reject(jqXHR, message, error);
-                });
-            } else {
-                var d = new $.Deferred();
-                ajaxPromise.then(function(data) {
-                    if(data.dailyClose) {
-                        return d.resolve(data.dailyClose);
-                    } else {
-                        return d.resolve(data);
-                    }
-                }, function(jqXHR, message, error) {
-                    return d.reject(jqXHR, message, error);
-                });
-                if(typeof Promise !== "undefined" && Promise.toString().indexOf("[native code]") !== -1){
-                    return Promise.resolve(d.promise());
+            var d = new $.Deferred();
+            ajaxPromise.then(function(data) {
+                if(data.dailyClose) {
+                    return d.resolve(data.dailyClose);
                 } else {
-                    return d.promise();
+                    return d.resolve(data);
                 }
-            }
+            }, function(jqXHR, message, error) {
+                return d.reject(jqXHR, message, error);
+            });
+
+            return resolveDeferred(d, resolve, reject);
         },
         /**
          * A list of close prices for the previous day for certain symbols (on a specific account)

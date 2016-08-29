@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.20.2  ******/
+/******  Copyright 2016 Tradable ApS; @license MIT; v1.20.3  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log === "undefined") {
@@ -45,7 +45,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.20.2',
+        version : '1.20.3',
         app_id: appId,
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
@@ -502,10 +502,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         }, function () {
                             excludeAndValidate(reject, err);
                         });
-                    } else if(err.status === 502 || err.status === 500 || err.status === 403) {
+                    } else {
                         excludeAndValidate(reject, err);
-                    } else if(reject) {
-                        reject(err);
                     }
                     tradable.initializingAccount = false;
                 });
@@ -2052,36 +2050,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 dataType: 'json'
             });
 
-            if(!!resolve || !!reject){
-                return ajaxPromise.then(function(data){
-                    if(typeof resolve === "function") {
-                        if(data.dailyClose) {
-                            return resolve(data.dailyClose);
-                        } else {
-                            return resolve(data);
-                        }
-                    }
-                }, function(jqXHR, message, error){
-                    if(typeof reject === "function")
-                        return reject(jqXHR, message, error);
-                });
-            } else {
-                var d = new $.Deferred();
-                ajaxPromise.then(function(data) {
-                    if(data.dailyClose) {
-                        return d.resolve(data.dailyClose);
-                    } else {
-                        return d.resolve(data);
-                    }
-                }, function(jqXHR, message, error) {
-                    return d.reject(jqXHR, message, error);
-                });
-                if(typeof Promise !== "undefined" && Promise.toString().indexOf("[native code]") !== -1){
-                    return Promise.resolve(d.promise());
+            var d = new $.Deferred();
+            ajaxPromise.then(function(data) {
+                if(data.dailyClose) {
+                    return d.resolve(data.dailyClose);
                 } else {
-                    return d.promise();
+                    return d.resolve(data);
                 }
-            }
+            }, function(jqXHR, message, error) {
+                return d.reject(jqXHR, message, error);
+            });
+
+            return resolveDeferred(d, resolve, reject);
         },
         /**
          * A list of close prices for the previous day for certain symbols (on a specific account)

@@ -1,6 +1,6 @@
 {
   "name": "tradable-core",
-  "version": "1.20.2",
+  "version": "1.20.3",
   "description": "Lightweight JS wrapper of the Tradable API that will make the integration really easy.",
   "main": "dist/tradable.js",
   "scripts": {
