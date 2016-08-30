@@ -917,6 +917,22 @@ QUnit.test( "Start and stop candle updates", function( assert ) {
     });
 });
 
+QUnit.test( "Reset instrument cache clears the lists", function( assert ) {
+    assert.ok(tradable.availableCategories.length, "availableCategories has length");
+    assert.ok(tradable.availableInstruments.length, "availableInstruments has length");
+    assert.ok(tradable.availableSymbols.length, "availableSymbols has length");
+    assert.ok(tradable.availableCurrencies.length, "availableCurrencies has length");
+    assert.ok(tradable.instrumentKeysForAccountUpdates.length, "instrumentKeysForAccountUpdates has length");
+
+    tradable.testhook.resetInstrumentCache();
+
+    assert.ok(!tradable.availableCategories.length, "availableCategories cleared");
+    assert.ok(!tradable.availableInstruments.length, "availableInstruments cleared");
+    assert.ok(!tradable.availableSymbols.length, "availableSymbols cleared");
+    assert.ok(!tradable.availableCurrencies.length, "availableCurrencies cleared");
+    assert.ok(!tradable.instrumentKeysForAccountUpdates.length, "instrumentKeysForAccountUpdates cleared");
+});
+
 QUnit.test( "Create demo account without appKey throws error", function( assert ) {
     var appKey = tradable.app_key;
     tradable.app_key = undefined;

@@ -472,13 +472,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         makeAccountRequest : function (type, accountId, method, postData, resolve, reject){
             return tradable.makeOsRequest("accounts", type, accountId, method, postData, resolve, reject);
         },
+        initializingAccount : false,
         /**
          * Sets the account unique id that will be used for account related API calls
          * @param      {String}   accountId Account uniqueId
          * @param      {Function} resolve Success callback for the API call, errors don't get called through this callback
          * @param      {Function} reject Error callback for the API call
          */
-        initializingAccount : false,
         setSelectedAccount : function (accountId, resolve, reject){
             if(tradable.accountMap[accountId]) {
                 tradable.lastSnapshot = undefined;
@@ -2440,6 +2440,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradable.availableInstruments.splice(0, tradable.availableInstruments.length);
         tradable.availableSymbols.splice(0, tradable.availableSymbols.length);
         tradable.availableCurrencies.splice(0, tradable.availableCurrencies.length);
+        tradable.instrumentKeysForAccountUpdates.splice(0, tradable.instrumentKeysForAccountUpdates.length);
         cachedInstrumentIds = {};
     }
     function isInstrumentCached(instrumentId) {
