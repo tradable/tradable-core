@@ -50,6 +50,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
         auth_loc: oauthEndpoint.oauthURL,
+        external_id: undefined,
         login_loc : oauthEndpoint.oauthURL + '&showLogin=true',
         approval_page_loc : oauthEndpoint.oauthURL + '&showApproval=true',
         broker_signup_loc : 'https://' + oauthEndpoint.oauthHost + 'brokerSignup?client_id='+appId+'&redirect_uri='+redirectUrl,
@@ -128,10 +129,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         showBrokerSignUpPageInWindow: function () {
             tradable.openOAuthPage("BROKER_SIGNUP", false);
         },
-        openOAuthPage: function (type, redirect, brokerId) {
+        /**
+         * Saves an external id for user mapping purposes. It is required to set the external id before authentication for tradable to properly map it with all the user entries.
+         * @param   {String} externalId User id in external system
+         */
+        setExternalId: function(externalId) {
+            tradable.external_id = externalId;
+        },
+        getOAuthUrl : function (type, brokerId) {
             var url = (type.toUpperCase() === "AUTHENTICATE") ? tradable.auth_loc :
                       (type.toUpperCase() === "LOGIN") ? tradable.login_loc :
-                      (type.toUpperCase() === "APPROVAL") ? tradable.approval_page_loc : 
+                      (type.toUpperCase() === "APPROVAL") ? tradable.approval_page_loc :
                       (type.toUpperCase() === "BROKER_SIGNUP") ? tradable.broker_signup_loc : undefined;
             if(!url) {
                 throw "Choose a correct type: AUTHENTICATE, LOGIN, APPROVAL or BROKER_SIGNUP";
@@ -139,6 +147,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(typeof brokerId !== "undefined") {
                 url = url + "&broker_id=" + brokerId;
             }
+
+            if(type.toUpperCase() === "AUTHENTICATE" || type.toUpperCase() === "LOGIN") {
+                if(typeof tradable.external_id !== "undefined") {
+                    url = url + "&external_id=" + tradable.external_id;
+                }
+            }
+            return url;
+        },
+        openOAuthPage: function (type, redirect, brokerId) {
+            var url = tradable.getOAuthUrl(type, brokerId);
 
             if(type.toUpperCase() === "AUTHENTICATE" || type.toUpperCase() === "LOGIN") {
                 resetExcludedAccounts();
@@ -769,6 +787,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
             if(typeof externalId === "string") {
                 apiAuthenticationRequest['externalId'] = externalId;
+            } else if(typeof tradable.external_id !== "undefined") {
+                apiAuthenticationRequest['externalId'] = tradable.external_id;
             }
             tradable.makeAuthenticationRequest(deferred, "authenticate", apiAuthenticationRequest);
 

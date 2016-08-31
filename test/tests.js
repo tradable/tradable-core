@@ -851,7 +851,25 @@ QUnit.test("Setting Account Frequency Millis", function ( assert ) {
     assert.ok(tradable.accountUpdateMillis === millis, "Account frequency millis are properly set");
 });
 
-QUnit.test("Open OAuth", function ( assert ) {
+QUnit.test("Open OAuth, getOAuthURL & set external id", function ( assert ) {
+    assert.ok(tradable.auth_loc === tradable.getOAuthUrl("AUTHENTICATE"), "Correct authentication Url");
+    assert.ok(tradable.login_loc === tradable.getOAuthUrl("LOGIN"), "Correct force login Url");
+    assert.ok(tradable.approval_page_loc === tradable.getOAuthUrl("APPROVAL"), "Correct approval Url");
+    assert.ok(tradable.broker_signup_loc === tradable.getOAuthUrl("BROKER_SIGNUP"), "Correct broker signup Url");
+    assert.ok(tradable.getOAuthUrl("AUTHENTICATE", 12).indexOf(tradable.auth_loc) > -1 && tradable.getOAuthUrl("AUTHENTICATE", 12).indexOf("&broker_id="+12) > -1, "Correct authentication for specific broker Url");
+
+    assert.ok(!tradable.external_id, "External id not set");
+    var externalId = "MyCustomID";
+    tradable.setExternalId(externalId);
+    assert.ok(tradable.external_id === externalId, "External id is set");
+
+    assert.ok(tradable.getOAuthUrl("AUTHENTICATE").indexOf("&external_id="+externalId), "Correct authentication Url with external id");
+    assert.ok(tradable.getOAuthUrl("LOGIN").indexOf("&external_id="+externalId), "Correct authentication Url with external id");
+
+    assert.throws(function () {
+        tradable.getOAuthUrl("Wrong type");
+    }, "Invalid OAuth type for URL breaks");
+
     assert.throws(function () {
         tradable.openOAuthPage("Wrong type", false);
     }, "Invalid OAuth endpoint type breaks");
