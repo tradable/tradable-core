@@ -459,11 +459,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                         if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
                             if(!tradable.initializingAccount && tradable.isReLoginRequired(jqXHR)) {
                                 notifyReloginRequiredCallbacks();
-                            } else {
+                            } else if(!tradable.isReLoginRequired(jqXHR)) {
                                 notifyTokenExpired();
                             }
                         }
-                        notifyErrorCallbacks(jqXHR.responseJSON);
+                        if(!tradable.isReLoginRequired(jqXHR)) {
+                            notifyErrorCallbacks(jqXHR.responseJSON);
+                        }
                     }
                 });
 
