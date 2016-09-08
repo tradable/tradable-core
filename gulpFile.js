@@ -1,4 +1,4 @@
-var versionNumber = '1.20.3';
+var versionNumber = '1.20.4';
 
 var gulp = require('gulp'),
     rename = require('gulp-rename'),

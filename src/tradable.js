@@ -523,11 +523,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                             });
                         }, function () {
                             excludeAndValidate(deferred, err);
-                            tradable.initializingAccount = false;
                         });
                     } else {
                         excludeAndValidate(deferred, err);
-                        tradable.initializingAccount = false;
                     }
                 });
                 return resolveDeferred(deferred, resolve, reject);
@@ -2540,6 +2538,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.signOut();
         }
         deferred.reject(err);
+        tradable.initializingAccount = false;
     }
 
     function validateToken() {
