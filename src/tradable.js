@@ -505,27 +505,32 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.selectedAccountId = accountId;
                 console.log('New accountId is set');
                 tradable.initializingAccount = true;
-                return initializeValuesForCurrentAccount(function() {
+                var deferred = $.Deferred();
+                initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
                         localStorage.setItem("selectedAccount:"+appId, accountId);
                     }
-                    if(resolve) {
-                        resolve();
-                    }
                     tradable.initializingAccount = false;
+                    deferred.resolve();
                 },
                 function(err) {
                     if(tradable.isReLoginRequired(err)) {
                         tradable.reLogin().then(function () {
-                            tradable.setSelectedAccount(accountId);
+                            tradable.setSelectedAccount(accountId).then(function () {
+                                tradable.initializingAccount = false;
+                                setTradingEnabled(true);
+                                deferred.resolve();
+                            });
                         }, function () {
-                            excludeAndValidate(reject, err);
+                            excludeAndValidate(deferred, err);
+                            tradable.initializingAccount = false;
                         });
                     } else {
-                        excludeAndValidate(reject, err);
+                        excludeAndValidate(deferred, err);
+                        tradable.initializingAccount = false;
                     }
-                    tradable.initializingAccount = false;
                 });
+                return resolveDeferred(deferred, resolve, reject);
             } else {
                 console.error("Can't set account id to: " + accountId);
             }
@@ -2140,7 +2145,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         reLoginForAccount : function (accountId, resolve, reject) {
             var empty = {};
             var reloginPromise = tradable.makeAccountRequest("POST", accountId, "reLogin/", empty).then(function () {
-                setTradingEnabled(true);
+                if(!tradable.initializingAccount) {
+                    setTradingEnabled(true);
+                }
             });
 
             return resolveDeferred(reloginPromise, resolve, reject);
@@ -2224,8 +2231,15 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     }
 
+    tradable.getTokenValuesFromHashFragment = getTokenValuesFromHashFragment;
     // Extracts the token values from a url's hash fragment
     function getTokenValuesFromHashFragment(hashFragment) {
+        //removeIf(production)
+        // Chrome extension test
+        if(isLocalStorageSupported()) {
+            localStorage.setItem("chromeTest", hashFragment);
+        }
+        //endRemoveIf(production)
         var trToken = {
             'accessToken' : undefined,
             'endPoint' : undefined,
@@ -2518,16 +2532,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         tradable.accountIdsToExclude.splice(0, tradable.accountIdsToExclude.length); // Reset excluded accounts
     }
 
-    function excludeAndValidate(reject, err) {
+    function excludeAndValidate(deferred, err) {
         tradable.excludeCurrentAccount();
         if(tradable.accounts.length > 0) {
             validateToken();
         } else {
             tradable.signOut();
         }
-        if(reject) {
-            reject(err);
-        }
+        deferred.reject(err);
     }
 
     function validateToken() {
