@@ -1,14 +1,14 @@
 
 // Avoid console errors when not supported
-if (typeof console === "undefined" || typeof console.log === "undefined") {
-    console = { log: function() {}, warn: function() {} };
+if (typeof console === "undefined" || typeof console.log !== "function" || typeof console.warn !== "function" || typeof console.error !== "function") {
+    console = { log: function() {}, warn: function() {}, error: function() {} };
 }
 
 //Check minimum jQuery version '2.1.4'
 if(typeof jQuery === "undefined") {
-    console.warn('tradable requires jQuery to run');
+    console.warn("tradable requires jQuery to run");
 } else if(!isGreaterOrEqualMinVersion(jQuery.fn.jquery, '2.1.4')) {
-    console.warn('tradable requires jQuery version 2.1.4 or above');
+    console.warn("tradable requires jQuery version 2.1.4 or above");
 }
 
 // Save jQuery in custom variable
@@ -73,6 +73,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         lastSnapshot: null,
         instrumentKeysForAccountUpdates: [],
         accountUpdateMillis: 700,
+        log: function(msg) { console.log("[TR] " + msg); },
+        warn: function(msg) { console.warn("[TR] " + msg); },
+        error: function(msg) { console.error("[TR] " + msg); },
         /**
          * Redirect to the Tradable account approval page
          */
@@ -188,8 +191,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 localStorage.removeItem("tradingEnabled:"+appId);
                 localStorage.removeItem("expirationTimeUTC:"+appId);
             }
-            tradable.tradingEnabled = false;
-            notifyReadyCallbacks();
+            setTradingEnabled(false);
         },
         isEventValid : function(eventName) {
             return (typeof eventName === "string" && $.inArray(eventName, availableEvents) !== -1);
@@ -327,11 +329,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
         },
         addSymbolToUpdates: function(updateClientId, instrumentId) {
-            console.warn("'addSymbolToUpdates' is now deprecated, 'addInstrumentIdToUpdates' should now be used instead.");
+            tradable.warn("'addSymbolToUpdates' is now deprecated, 'addInstrumentIdToUpdates' should now be used instead.");
             tradable.addInstrumentIdToUpdates(updateClientId, instrumentId);
         },
         removeSymbolFromUpdates: function(updateClientId, instrumentIdToRemove) {
-            console.warn("'removeSymbolFromUpdates' is now deprecated, 'removeInstrumentIdFromUpdates' should now be used instead.");
+            tradable.warn("'removeSymbolFromUpdates' is now deprecated, 'removeInstrumentIdFromUpdates' should now be used instead.");
             tradable.removeInstrumentIdFromUpdates(updateClientId, instrumentIdToRemove);
         },
         /**
@@ -422,7 +424,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         getRemainingTokenMillis : function() {
             if(!tradable.expirationTimeUTC) {
-                console.log("You need to authenticate before calling this method");
+                tradable.log("You need to authenticate before calling this method");
             }
             return (tradable.expirationTimeUTC - new Date().getTime());
         },
@@ -447,7 +449,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else if(tradable.accountMap[accountId]) {
                 endpoint = tradable.accountMap[accountId].endpointURL;
             } else {
-                console.warn("Please specify a valid accountId or method");
+                tradable.warn("Please specify a valid accountId or method");
                 var wrongRequestDeferred = new $.Deferred().reject("Invalid request: Please specify a valid accountId or method");
                 return resolveDeferred(wrongRequestDeferred, resolve, reject);
             }
@@ -473,11 +475,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             ajaxPromise.then(function(){},
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
-                        if(jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502) {
-                            if(!tradable.initializingAccount && tradable.isReLoginRequired(jqXHR)) {
+                        if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
+                            if(tradable.isReLoginRequired(jqXHR)) {
                                 notifyReloginRequiredCallbacks();
-                            } else if(!tradable.isReLoginRequired(jqXHR)) {
+                            } else if(tradable.isTokenExpiredCode(jqXHR)) {
                                 notifyTokenExpired();
+                            } else if(!tradable.isReLoginRequired(jqXHR)) {
+                                setTradingEnabled(false);
                             }
                         }
                         if(!tradable.isReLoginRequired(jqXHR)) {
@@ -503,7 +507,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.lastSnapshot = undefined;
                 tradable.selectedAccount = tradable.accountMap[accountId];
                 tradable.selectedAccountId = accountId;
-                console.log('New accountId is set');
+                tradable.log("Setting account: " + ((accountId && accountId.length) ? (accountId.substring(0, accountId.length/2)) : accountId) + "..");
                 tradable.initializingAccount = true;
                 var deferred = $.Deferred();
                 initializeValuesForCurrentAccount(function() {
@@ -517,7 +521,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     if(tradable.isReLoginRequired(err)) {
                         tradable.reLogin().then(function () {
                             tradable.setSelectedAccount(accountId).then(function () {
-                                tradable.initializingAccount = false;
                                 setTradingEnabled(true);
                                 deferred.resolve();
                             });
@@ -530,11 +533,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 });
                 return resolveDeferred(deferred, resolve, reject);
             } else {
-                console.error("Can't set account id to: " + accountId);
+                tradable.error("Can't set account id to: " + accountId);
             }
         },
         isReLoginRequired : function (err) {
             return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === 1005);
+        },
+        isTokenExpiredCode: function (err) {
+            return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === 1007);
         },
         excludeCurrentAccount : function() {
             var accountId = tradable.selectedAccountId;
@@ -573,7 +579,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(isInstrumentCached(instrumentId)) {
                 return tradable.getInstrumentForProperty(tradable.availableInstruments, "instrumentId", instrumentId);
             } else {
-                console.warn("Instrument Id not found...");
+                tradable.warn("Instrument Id not found...");
             }
             return null;
         },
@@ -882,6 +888,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                    }
                    tradable.allAccounts.push(account);
                 });
+                tradable.log("Accounts initialized");
             });
 
             return resolveDeferred(accountsPromise, resolve, reject);
@@ -1430,7 +1437,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * @deprecated [This method will eventually be removed, please use 'placeProtectedOrderForAccount']
          */
         placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
-            console.warn("placeOrderWithProtections is deprecated and will eventually be removed, please use placeProtectedOrder or placeProtectedOrderForAccount instead.");
+            tradable.warn("placeOrderWithProtections is deprecated and will eventually be removed, please use placeProtectedOrder or placeProtectedOrderForAccount instead.");
             var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
             if(tpDistance)
                 order["takeProfitDistance"] = tpDistance;
@@ -2036,7 +2043,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return tradable.makeAccountRequest("POST", accountId, "prices/", instrumentIdsObj, resolve, reject);
             } else {
                 var deferred = new $.Deferred();
-
                 var missingInstrumentIds = findMissingInstrumentIds(instrumentIds);
 
                 var promise;
@@ -2153,7 +2159,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
             var deferred = new $.Deferred();
 
-            console.log("Enabling Trading...");
+            tradable.log("Enabling Trading...");
             notifyNamespaceCallbacks("embedStarting");
 
             tradable.tradingEnabled = false;
@@ -2172,6 +2178,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
     };
 
+    tradable.log("Starting v_"+tradable.version);
     initializeLibrary();
 
     function initializeLibrary(){
@@ -2203,7 +2210,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         if(!success) {
-           console.log('Initiating without authentication...');
+           tradable.log("Initiating without authentication...");
            $(document).ready(function() {
                notifyReadyCallbacks();
            });
@@ -2298,7 +2305,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         var oauthHost = "api.tradable.com/";
         if(appId > 200000) { // Staging app-id
             oauthHost = "api-staging.tradable.com/";
-            console.log("Starting in staging mode...");
+            tradable.log("Starting in staging mode...");
         }
         if(customOAuthHost) {
             oauthHost = customOAuthHost;
@@ -2375,25 +2382,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         }
 
         resetInstrumentCache();
-        return getDefaultInstruments().then(function() {
-            console.log('Instruments ready');
+        var deferred = new $.Deferred();
+        getDefaultInstruments().then(function() {
+            tradable.log("Instruments ready");
             if(reset) {
                 tradable.tradingEnabled = true;
                 notifyAccountSwitchCallbacks();
             }
-            if(!!resolve && typeof resolve === "function") {
-                return resolve(tradable.accounts);
-            } else {
-                return this;
-            }
-            //return
+            deferred.resolve(tradable.accounts);
         }, function(error) {
-            if(!!reject && typeof reject === "function") {
-                return reject(error);
-            } else {
-                return this;
-            }
+            deferred.reject(error);
         });
+        return resolveDeferred(deferred, resolve, reject);
     }
 
      
@@ -2531,18 +2531,26 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function excludeAndValidate(deferred, err) {
+        var accQty = tradable.accounts.length;
         tradable.excludeCurrentAccount();
+        tradable.log("Account initialization failed..");
         if(tradable.accounts.length > 0) {
-            validateToken();
+            tradable.log("Resetting to previous account");
+            setSelectedAccountAndNotify(false, accQty).then(function() {
+                tradable.initializingAccount = false;
+            }, function() {
+                tradable.initializingAccount = false;
+            });
         } else {
+            tradable.log("No more accounts available, signing out..");
             tradable.signOut();
+            tradable.initializingAccount = false;
         }
         deferred.reject(err);
-        tradable.initializingAccount = false;
     }
 
     function validateToken() {
-        console.log("Validating token...");
+        tradable.log("Validating token...");
         // Check token validity
         tradable.getAccounts().then(
             function() {
@@ -2554,10 +2562,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         );
     }
 
-    function setSelectedAccountAndNotify(set_latest_account, account_qty) {
-        var deferred = new $.Deferred();
-
-        console.log('Accounts initialized');
+    function getAccountIdToInitialize(set_latest_account, account_qty) {
         var accountId;
         var savedAccId = localStorage.getItem("selectedAccount:"+appId);
         var accIdxToSelect = tradable.accounts.length - 1;
@@ -2568,12 +2573,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         } else if(accIdxToSelect >= 0) {
             accountId = tradable.accounts[accIdxToSelect].uniqueId;
         }
+        return accountId;
+    }
+
+    function setSelectedAccountAndNotify(set_latest_account, account_qty) {
+        var deferred = new $.Deferred();
+
+        var accountId = getAccountIdToInitialize(set_latest_account, account_qty);
         resetUpdates();
         if(accountId) {
             tradable.setSelectedAccount(accountId, function() {
-                if(!tradable.tradingEnabled) {
-                    setTradingEnabled(true);
-                }
+                setTradingEnabled(true);
                 deferred.resolve();
             }, function(error) {
                 deferred.reject(error);
@@ -2586,11 +2596,14 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function setTradingEnabled(value) {
-        tradable.tradingEnabled = value;
-        if(isLocalStorageSupported()) {
-            localStorage.setItem("tradingEnabled:"+appId, tradable.tradingEnabled);
+        if(value !== tradable.tradingEnabled) {
+            tradable.tradingEnabled = value;
+            tradable.log("Embed ready: " + tradable.tradingEnabled);
+            if(isLocalStorageSupported()) {
+                localStorage.setItem("tradingEnabled:"+appId, tradable.tradingEnabled);
+            }
+            notifyReadyCallbacks();
         }
-        notifyReadyCallbacks();
     }
 
     // Notify events
@@ -2607,6 +2620,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function processAccountUpdate() {
         if(tradable.tradingEnabled && !tradable.initializingAccount && !processingUpdate &&
             (accountUpdatedCallbacks.length > 0 || typeof callbackHolder["accountUpdated"] !== undefined)) {
+            var processingAccountId = tradable.selectedAccountId;
             processingUpdate = true;
             var instrumentIds = [];
             $(tradable.instrumentKeysForAccountUpdates).each(function(idx, elem) {
@@ -2616,8 +2630,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 }
             });
             tradable.getSnapshot(instrumentIds).then(function(account) {
-                tradable.lastSnapshot = account;
-                return checkInstrumentsToCache(account);
+                if(processingAccountId === tradable.selectedAccountId) {
+                    tradable.lastSnapshot = account;
+                    return checkInstrumentsToCache(account);
+                } else {
+                    return new $.Deferred().reject();
+                }
             }).then(function(account) {
                 if(tradable.tradingEnabled && !tradable.initializingAccount) {
                     $.each(accountUpdatedCallbacks, function(idx, call) {
@@ -2649,6 +2667,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             if(missingInstrumentIds.length) {
                 tradable.getInstrumentsFromIds(missingInstrumentIds).then(function() {
                     deferred.resolve(snapshot);
+                }, function (err) {
+                    deferred.reject(err);
                 });
             } else {
                 deferred.resolve(snapshot);
@@ -2659,6 +2679,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function notifyTokenExpired() {
+        tradable.log("Token expired");
         setTradingEnabled(false);
         $(tokenExpirationCallbacks).each(function(index, callback) {
             executeCallback(callback);
@@ -2674,6 +2695,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     }
 
     function notifyAccountSwitchCallbacks() {
+        tradable.log("Account switched: " + tradable.selectedAccount.displayName);
         $(accountSwitchCallbacks).each(function(index, callback) {
             executeCallback(callback);
         });
@@ -2695,7 +2717,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 }
             }
         } else {
-            console.error("Careful, can't notify '" + eventName + "', it's an invalid event name");
+            tradable.error("Careful, can't notify '" + eventName + "', it's an invalid event name");
         }
     }
 
@@ -2706,7 +2728,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
             callback();
         } catch(err) {
-            console.error(err);
+            tradable.error(err);
         }
     }
 

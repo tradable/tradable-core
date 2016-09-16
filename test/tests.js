@@ -1008,6 +1008,22 @@ QUnit.test("isReLoginRequired", function ( assert ) {
     assert.ok(tradable.isReLoginRequired({'responseJSON': {'httpStatus': 403, 'code': 1005}}), "isReLoginRequired");
 });
 
+QUnit.test("isTokenExpiredCode", function ( assert ) {
+    assert.ok(!tradable.isTokenExpiredCode(undefined), "isTokenExpiredCode: undefined");
+    assert.ok(!tradable.isTokenExpiredCode({'responseJSON': {'httpStatus': 403 }}), "isTokenExpiredCode no code");
+    assert.ok(!tradable.isTokenExpiredCode({'responseJSON': {'code': 1007}}), "isTokenExpiredCode no status");
+    assert.ok(!tradable.isTokenExpiredCode({'responseJSON': {'httpStatus': 403, 'code': 107}}), "isTokenExpiredCode wrong code");
+    assert.ok(!tradable.isTokenExpiredCode({'responseJSON': {'httpStatus': 43, 'code': 1007}}), "isTokenExpiredCode wrong status");
+    assert.ok(tradable.isTokenExpiredCode({'responseJSON': {'httpStatus': 403, 'code': 1007}}), "isTokenExpiredCode");
+});
+
+QUnit.test("Tradable logging", function ( assert ) {
+    tradable.log("test");
+    tradable.warn("test");
+    tradable.error("test");
+    assert.ok(true, "Tradable logging does not break");
+});
+
 QUnit.test("Sign Out", function ( assert ) {
     signOut(assert);
 });

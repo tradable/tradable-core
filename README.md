@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.20.4/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.21/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}" data-app-key="{your_app_key}"></script>
 ```
 
@@ -75,7 +75,7 @@ tradable.on("myEmbedReadyListener", "embedReady", function() {
 });
 ```
 
-The `embedReady` listener is notified every time that the status of `tradable.tradingEnabled` changes. As you might guess, if `tradable.tradingEnabled` is `true`, it means that the OAuth token was received and the user is successfully authenticated, i.e. you can now execute trades and orders.
+The `embedReady` listener is notified every time that the status of `tradable.tradingEnabled` changes. As you might guess, if `tradable.tradingEnabled` is `true`, it means that the OAuth token was received and the user is successfully authenticated, i.e. you can now execute trades and orders. On the other hand, if you receive an `embedReady` event and `tradable.tradingEnabled` is `false`, you need to show the disconnected state.
 
 Turning the listener off is as easy as:
 ```javascript
