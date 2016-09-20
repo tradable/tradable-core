@@ -538,10 +538,13 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }
         },
         isReLoginRequired : function (err) {
-            return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === 1005);
+            return tradable.isErrorCode(err, 1005);
         },
         isTokenExpiredCode: function (err) {
-            return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === 1007);
+            return tradable.isErrorCode(err, 1007);
+        },
+        isErrorCode : function(err, code) {
+            return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === code);
         },
         excludeCurrentAccount : function() {
             var accountId = tradable.selectedAccountId;
