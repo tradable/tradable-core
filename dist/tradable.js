@@ -74,9 +74,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         lastSnapshot: null,
         instrumentKeysForAccountUpdates: [],
         accountUpdateMillis: 700,
-        log: function(msg) { console.log("[TR] " + msg); },
-        warn: function(msg) { console.warn("[TR] " + msg); },
-        error: function(msg) { console.error("[TR] " + msg); },
         /**
          * Redirect to the Tradable account approval page
          */
@@ -172,6 +169,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.auth_window = popupwindow(url, windowName);
             }
         },
+        log: function(msg) { console.log("[TR] " + msg); },
+        warn: function(msg) { console.warn("[TR] " + msg); },
+        error: function(msg) { console.error("[TR] " + msg); },
         /**
          * Enables trading for the account corresponding to the given access token
          * @param      {String} accessToken    The authentication token granting access to the account
