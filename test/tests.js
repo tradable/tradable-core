@@ -407,45 +407,6 @@ QUnit.test( "Attach TP & SL", function( assert ) {
     });
 });
 
-QUnit.test( "Place Order with protections", function( assert ) {
-    var done = assert.async();
-    var pos;
-    var instrumentId = "EURUSD";
-    var side = "SELL";
-    var amt = 1000;
-
-    tradable.placeOrderWithProtections (amt, 0, side, instrumentId, "MARKET", 0.0025, 0.0025).then(function (order) {
-        assert.ok(!!order, 'Order with id: ' + order.id + ' received');
-        assert.ok(order.side === side, "Position with side");
-        assert.ok(order.amount === amt, "Position with amount");
-
-        return tradable.getOpenPositions();
-    }).then(function(positions){
-        pos = positions[0];
-        assert.ok(pos.takeprofit, "Position with takeprofit");
-        assert.ok(pos.stoploss, "Position with stoploss");
-        assert.ok(pos.instrumentId === instrumentId, "Position with instrumentId");
-
-        return tradable.cancelTakeProfit(pos.id);
-    }).then(function(){
-        return tradable.getPositionById(pos.id);
-    }).then(function(position){
-        assert.ok(!!position && !position.takeprofit, "cancelTakeProfitForAccount succeeded");
-        return tradable.cancelStopLoss(pos.id);
-    }).then(function(){
-        return tradable.getPositionById(pos.id);
-    }).then(function(position){
-        assert.ok(!!position && !position.stoploss, "cancelStopLossForAccount succeeded");
-        return tradable.closePosition(pos.id);
-    }).then(function(){
-        assert.ok(true, "Position closed");
-        done();
-    }, function(error) {
-        QUnit.pushFailure(JSON.stringify(error.responseJSON));
-        done();
-    });
-});
-
 function placeProtectedOrder(assert, instrumentId, checkTPSL) {
     var done = assert.async();
     var pos;

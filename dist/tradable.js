@@ -505,10 +505,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         setSelectedAccount : function (accountId, resolve, reject){
             if(tradable.accountMap[accountId]) {
+                if(accountId !== tradable.selectedAccountId)
+                    tradable.log("Setting account: " + ((accountId && accountId.length) ? (accountId.substring(0, accountId.length/2)) : accountId) + "..");
                 tradable.lastSnapshot = undefined;
                 tradable.selectedAccount = tradable.accountMap[accountId];
                 tradable.selectedAccountId = accountId;
-                tradable.log("Setting account: " + ((accountId && accountId.length) ? (accountId.substring(0, accountId.length/2)) : accountId) + "..");
                 tradable.initializingAccount = true;
                 var deferred = $.Deferred();
                 initializeValuesForCurrentAccount(function() {
@@ -521,12 +522,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 function(err) {
                     if(tradable.isReLoginRequired(err)) {
                         tradable.reLogin().then(function () {
-                            tradable.setSelectedAccount(accountId).then(function () {
-                                setTradingEnabled(true);
-                                deferred.resolve();
-                            });
-                        }, function () {
-                            excludeAndValidate(deferred, err);
+                            return tradable.setSelectedAccount(accountId);
+                        }).then(function () {
+                            setTradingEnabled(true);
+                            deferred.resolve();
+                        }, function (err) {
+                            deferred.reject(err);
                         });
                     } else {
                         excludeAndValidate(deferred, err);
@@ -1424,47 +1425,6 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         placeOrderForAccount : function (accountId, amount, price, side, instrumentId, type, resolve, reject){
             var order = {"amount": amount, "price": price, "side": side, "instrumentId": instrumentId, "type": type};
-            return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
-        },
-         /**
-         * [deprecated] Please use 'placeProtectedOrder'
-         * @param      {number} amount The order amount
-         * @param      {number} price The trigger price for the order (0 if MARKET order)
-         * @param      {String} side The order side ('BUY' or 'SELL')
-         * @param      {String} instrumentId The instrument id for the order
-         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
-         * @param      {number} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {number} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
-         * @param      {Function} reject(optional) Error callback for the API call
-         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         * @deprecated [This method will eventually be removed, please use 'placeProtectedOrder']
-         */
-        placeOrderWithProtections : function (amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
-            return tradable.placeOrderWithProtectionsForAccount(tradable.selectedAccountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject);
-        },
-         /**
-         * [deprecated] Please use 'placeProtectedOrderForAccount'
-         * @param      {String} accountId The unique id for the account the request goes to
-         * @param      {number} amount The order amount
-         * @param      {number} price The trigger price for the order (0 if MARKET order)
-         * @param      {String} side The order side ('BUY' or 'SELL')
-         * @param      {String} instrumentId The instrument id for the order
-         * @param      {String} type Order type ('MARKET','LIMIT' or 'STOP')
-         * @param      {number} tpDistance The distance from the filled price where the take profit trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {number} slDistance The distance from the filled price where the stop loss trigger price will be set. This is only supported for some account types, use the API getAccounts call to check if it is supported. (Set to null if not wanted)
-         * @param      {Function} resolve(optional) Success callback for the API call, errors don't get called through this callback
-         * @param      {Function} reject(optional) Error callback for the API call
-         * @return     {Object} If resolve/reject are not specified it returns a Promise for chaining, otherwise it calls the resolve/reject handlers
-         * @deprecated [This method will eventually be removed, please use 'placeProtectedOrderForAccount']
-         */
-        placeOrderWithProtectionsForAccount : function (accountId, amount, price, side, instrumentId, type, tpDistance, slDistance, resolve, reject){
-            tradable.warn("placeOrderWithProtections is deprecated and will eventually be removed, please use placeProtectedOrder or placeProtectedOrderForAccount instead.");
-            var order = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
-            if(tpDistance)
-                order["takeProfitDistance"] = tpDistance;
-            if(slDistance)
-                order["stopLossDistance"] = slDistance;
             return tradable.makeAccountRequest("POST", accountId, "orders/", order, resolve, reject);
         },
         /**
