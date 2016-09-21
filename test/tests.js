@@ -789,6 +789,22 @@ QUnit.test("Test getDecimalQty(amount)", function ( assert ) {
     assert.ok(tradable.testhook.getDecimalQty(null) === 0, "Number returns 0 decimals");
 });
 
+QUnit.test("Test roundPrice", function ( assert ) {
+    assert.ok(String(tradable.roundPrice("EURUSD", 1.123451121212121)) === "1.12345", "Correct rounding for EURUSD 1.123451121212121");
+    assert.ok(String(tradable.roundPrice("EURUSD", 1.123451000000002)) === "1.12345", "Correct rounding for EURUSD 1.123451000000002");
+    assert.ok(String(tradable.roundPrice("EURUSD", 1.123459999999991)) === "1.12346", "Correct rounding for EURUSD 1.123451999999999");
+    assert.ok(String(tradable.roundPrice("EURUSD", 10023.11111999999)) === "10023.11112", "Correct rounding for EURUSD 10023.11111999999");
+
+    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7501)) === "1324.75", "Correct rounding for GoldUSD 1324.7501");
+    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7508)) === "1324.751", "Correct rounding for GoldUSD 1324.7501");
+    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7520000000001)) === "1324.752", "Correct rounding for GoldUSD 1324.7520000000001");
+    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7)) === "1324.7", "Correct rounding for GoldUSD 1324.7");
+
+    assert.ok(tradable.roundPrice("EUSD", 1.11111) === null, "Invalid instrument returns null");
+    assert.ok(tradable.roundPrice("EURUSD", "10023.111") === null, "Invalid number returns null");
+    assert.ok(tradable.roundPrice("EURUSD", function() {}) === null, "Invalid number returns null");
+});
+
 QUnit.test("Test calculatePipDistance", function ( assert ) {
     assert.throws(function () {
         tradable.calculatePipDistance("asdasdasd", 1.123, 1.12312)

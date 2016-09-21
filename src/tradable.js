@@ -607,6 +607,24 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
+         * @param {String} instrumentId     The instrument id to calculate the pip size
+         * @param {number} price   Price to round
+         * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded price should be 1.11492
+         * var roundedPrice = tradable.roundPrice("EURUSD", 1.114919999999998);
+         */
+        roundPrice : function(instrumentId, price) {
+            var instrument = tradable.getInstrumentFromId(instrumentId);
+            if(instrument && typeof price === "number") {
+                var rounder = Math.pow(10, instrument.decimals);
+                return (Math.round(price * rounder) / rounder);
+            } else {
+                tradable.warn((typeof price !== "number") ? ("Invalid number: " + price) : ("'" + instrumentId + "' instrument not found"));
+                return null;
+            }
+        },
+        /**
          * Calculates the pip size for an instrument
          * @param instrumentId The instrument id to calculate the pip size
          * @returns {number}
@@ -1490,7 +1508,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
 
             var priceForDistance = (type === "MARKET") ? currentBidOrAskPrice : price;
-            $.extend(orderCommand, tradable.getOrderProtections(accountId, takeProfitPrice, stopLossPrice, priceForDistance));
+            $.extend(orderCommand, tradable.getOrderProtections(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance));
 
             return tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
         },
@@ -1540,7 +1558,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var orderModification = (order.price !== orderPrice) ? {'price': orderPrice} : {};
 
             var priceForDistance = (order.type === "MARKET") ? currentBidOrAskPrice : orderPrice;
-            var orderProtections = tradable.getOrderProtections(accountId, takeProfitPrice, stopLossPrice, priceForDistance);
+            var orderProtections = tradable.getOrderProtections(accountId, order.instrumentId, takeProfitPrice, stopLossPrice, priceForDistance);
 
             tradable.verifyProtectionModification(order, orderProtections, "takeProfit");
             tradable.verifyProtectionModification(order, orderProtections, "stopLoss");
@@ -1557,7 +1575,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 delete orderProtections[protectionType];
             }
         },
-        getOrderProtections : function(accountId, takeProfitPrice, stopLossPrice, priceForDistance) {
+        getOrderProtections : function(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance) {
             var account = tradable.accountMap[accountId];
             var supportedEntryTypes = account.protectionEntryTypes.entryTypes;
 
@@ -1566,18 +1584,18 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var entryType = ($.inArray("ABSOLUTE", supportedEntryTypes) !== -1) ? "ABSOLUTE" : "DISTANCE";
 
                 if(typeof takeProfitPrice !== "undefined") {
-                    orderProtections["takeProfit"] = getProtection(takeProfitPrice, priceForDistance, entryType);
+                    orderProtections["takeProfit"] = getProtection(instrumentId, takeProfitPrice, priceForDistance, entryType);
                 }
                 if(typeof stopLossPrice !== "undefined") {
-                    orderProtections["stopLoss"] = getProtection(stopLossPrice, priceForDistance, entryType);
+                    orderProtections["stopLoss"] = getProtection(instrumentId, stopLossPrice, priceForDistance, entryType);
                 }
             }
             return orderProtections;
 
-            function getProtection(protectionPrice, priceForDistance, entryType) {
+            function getProtection(instrumentId, protectionPrice, priceForDistance, entryType) {
                 return (protectionPrice === null) ? protectionPrice : {
                     'entryType': entryType,
-                    'value': (entryType === "DISTANCE") ? Math.abs(priceForDistance - protectionPrice) : protectionPrice
+                    'value': (entryType === "DISTANCE") ?  tradable.roundPrice(instrumentId, Math.abs(priceForDistance - protectionPrice)) : protectionPrice
                 };
             }
         },
