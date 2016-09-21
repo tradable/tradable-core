@@ -223,7 +223,7 @@ Tradable Core provides a few helper methods to perform different calculations:
 - [calculatePositionSizeForRiskPercentage](https://tradable.github.io/js/docs/index.html#tradable.calculatePositionSizeForRiskPercentage): Calculates a position size for an instrument out of a given equity percentage willing to risk.
 - [calculateExpectedProfitOrLoss](https://tradable.github.io/js/docs/index.html#tradable.calculateExpectedProfitOrLoss): Calculates the resulting equity profit or loss for a position size if a take profit or stop loss at a Pips/Points distance is hit.
 - [calculatePipSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePipSize): Calculates the pip size for an instrument.
-- [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument.
+- [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument. Note that it is required to round the order prices so that they are not rejected by the brokerages.
 
 ### Light integration
 
