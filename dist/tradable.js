@@ -609,6 +609,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
+         * Rounds a price for a certain instrument
          * @param {String} instrumentId     The instrument id to calculate the pip size
          * @param {number} price   Price to round
          * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
