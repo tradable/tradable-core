@@ -619,12 +619,32 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         roundPrice : function(instrumentId, price) {
             var instrument = tradable.getInstrumentFromId(instrumentId);
             if(instrument && typeof price === "number") {
-                var rounder = Math.pow(10, instrument.decimals);
-                return (Math.round(price * rounder) / rounder);
+                var decimals = instrument.decimals;
+                var step = 1 / Math.pow(10, decimals);
+                if(instrument.priceIncrements) {
+                    var priceInfo = tradable.findPriceInfo(instrument, price);
+                    if(priceInfo)
+                        step = priceInfo.increment;
+                        decimals = priceInfo.decimals;
+                }
+                var rounder = Math.pow(10, decimals);
+                var stepRounded = step * Math.round(price/step);
+                return Math.round(stepRounded * rounder) / rounder;
             } else {
                 tradable.warn((typeof price !== "number") ? ("Invalid number: " + price) : ("'" + instrumentId + "' instrument not found"));
                 return null;
             }
+        },
+        findPriceInfo : function(instrument, price) {
+            var band = null;
+            $(instrument.priceIncrements.priceIncrementBands).each(function(idx, val) {
+                if(val.lowerBound < price) {
+                    band = val;
+                } else {
+                    return false;
+                }
+            });
+            return band;
         },
         /**
          * Calculates the pip size for an instrument

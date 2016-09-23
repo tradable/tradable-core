@@ -750,7 +750,7 @@ QUnit.test("Test getDecimalQty(amount)", function ( assert ) {
     assert.ok(tradable.testhook.getDecimalQty(null) === 0, "Number returns 0 decimals");
 });
 
-QUnit.test("Test roundPrice", function ( assert ) {
+QUnit.test("Test roundPrice & findPriceInfo", function ( assert ) {
     assert.ok(String(tradable.roundPrice("EURUSD", 1.123451121212121)) === "1.12345", "Correct rounding for EURUSD 1.123451121212121");
     assert.ok(String(tradable.roundPrice("EURUSD", 1.123451000000002)) === "1.12345", "Correct rounding for EURUSD 1.123451000000002");
     assert.ok(String(tradable.roundPrice("EURUSD", 1.123459999999991)) === "1.12346", "Correct rounding for EURUSD 1.123451999999999");
@@ -764,6 +764,24 @@ QUnit.test("Test roundPrice", function ( assert ) {
     assert.ok(tradable.roundPrice("EUSD", 1.11111) === null, "Invalid instrument returns null");
     assert.ok(tradable.roundPrice("EURUSD", "10023.111") === null, "Invalid number returns null");
     assert.ok(tradable.roundPrice("EURUSD", function() {}) === null, "Invalid number returns null");
+
+    var bound1 = { "lowerBound": 0, "increment": 0.00001, "decimals": 5 };
+    var bound2 = { "lowerBound": 1, "increment": 0.00010, "decimals": 5 };
+    var bound3 = { "lowerBound": 2, "increment": 0.00025, "decimals": 5 };
+    var priceIncrements = {
+        "priceIncrementBands": [bound1, bound2, bound3]
+    };
+    var eurusd = tradable.getInstrumentFromSymbol("EURUSD");
+    eurusd["priceIncrements"] = priceIncrements;
+    assert.ok(tradable.findPriceInfo(eurusd, 0.12345) === bound1, "Finds correct price info above 0");
+    assert.ok(tradable.findPriceInfo(eurusd, 1.12345) === bound2, "Finds correct price info above 1");
+    assert.ok(tradable.findPriceInfo(eurusd, 2.54321) === bound3, "Finds correct price info above 2");
+    assert.ok(tradable.findPriceInfo(eurusd, -1.12345) === null, "Returns null below first price bound");
+
+
+    assert.ok(String(tradable.roundPrice("EURUSD", 0.123451121212121)) === "0.12345", "Correct rounding for EURUSD 0.123451121212121 using price increments");
+    assert.ok(String(tradable.roundPrice("EURUSD", 1.123451000000002)) === "1.1235", "Correct rounding for EURUSD 1.123451000000002 using price increments");
+    assert.ok(String(tradable.roundPrice("EURUSD", 2.1233459999999991)) === "2.12325", "Correct rounding for EURUSD 2.1233459999999991 using price increments");
 });
 
 QUnit.test("Test calculatePipDistance", function ( assert ) {
