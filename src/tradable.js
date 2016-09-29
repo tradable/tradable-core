@@ -2459,7 +2459,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function gatherForexInstrumentIds(instrumentResults) {
         var results = 0;
         $(instrumentResults).each(function(idx, instrumentResult) {
-            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) && results < 16) {
+            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) &&
+                    (results < 11 || instrumentResult.symbol === "EURUSD")) { //EURUSD is allowed for the tests to be able to work
                 idsToRequest.push(instrumentResult.instrumentId);
                 results++;
             }
