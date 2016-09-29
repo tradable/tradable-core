@@ -623,7 +623,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var decimals = instrument.decimals;
                 var step = 1 / Math.pow(10, decimals);
                 if(instrument.priceIncrements) {
-                    var priceInfo = tradable.findPriceInfo(instrument, price);
+                    var priceInfo = tradable.findPriceInfo(instrument.priceIncrements, price);
                     if(priceInfo)
                         step = priceInfo.increment;
                         decimals = priceInfo.decimals;
@@ -636,10 +636,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return null;
             }
         },
-        findPriceInfo : function(instrument, price) {
+        findPriceInfo : function(priceIncrements, price) {
             var band = null;
-            $(instrument.priceIncrements.priceIncrementBands).each(function(idx, val) {
-                if(val.lowerBound < price) {
+            $(priceIncrements.priceIncrementBands).each(function(idx, val) {
+                if(val.lowerBound <= price) {
                     band = val;
                 } else {
                     return false;
@@ -2300,13 +2300,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         var customOAuthHost = tradableConfig.customOAuthHost;
 
         var oauthHost = "api.tradable.com/";
-        if(appId > 200000) { // Staging app-id
+        if(appId > 200000) // Staging app-id
             oauthHost = "api-staging.tradable.com/";
-            tradable.log("Starting in staging mode...");
-        }
-        if(customOAuthHost) {
+        if(customOAuthHost)
             oauthHost = customOAuthHost;
-        }
 
         var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
         var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;

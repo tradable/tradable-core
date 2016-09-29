@@ -771,14 +771,13 @@ QUnit.test("Test roundPrice & findPriceInfo", function ( assert ) {
     var priceIncrements = {
         "priceIncrementBands": [bound1, bound2, bound3]
     };
+    assert.ok(tradable.findPriceInfo(priceIncrements, 0.12345) === bound1, "Finds correct price info from 0");
+    assert.ok(tradable.findPriceInfo(priceIncrements, 1.00000) === bound2, "Finds correct price info from 1");
+    assert.ok(tradable.findPriceInfo(priceIncrements, 2.54321) === bound3, "Finds correct price info from 2");
+    assert.ok(tradable.findPriceInfo(priceIncrements, -1.12345) === null, "Returns null below first price bound");
+
     var eurusd = tradable.getInstrumentFromSymbol("EURUSD");
     eurusd["priceIncrements"] = priceIncrements;
-    assert.ok(tradable.findPriceInfo(eurusd, 0.12345) === bound1, "Finds correct price info above 0");
-    assert.ok(tradable.findPriceInfo(eurusd, 1.12345) === bound2, "Finds correct price info above 1");
-    assert.ok(tradable.findPriceInfo(eurusd, 2.54321) === bound3, "Finds correct price info above 2");
-    assert.ok(tradable.findPriceInfo(eurusd, -1.12345) === null, "Returns null below first price bound");
-
-
     assert.ok(String(tradable.roundPrice("EURUSD", 0.123451121212121)) === "0.12345", "Correct rounding for EURUSD 0.123451121212121 using price increments");
     assert.ok(String(tradable.roundPrice("EURUSD", 1.123451000000002)) === "1.1235", "Correct rounding for EURUSD 1.123451000000002 using price increments");
     assert.ok(String(tradable.roundPrice("EURUSD", 2.1233459999999991)) === "2.12325", "Correct rounding for EURUSD 2.1233459999999991 using price increments");
