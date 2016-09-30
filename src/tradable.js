@@ -623,9 +623,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var step = 1 / Math.pow(10, decimals);
                 if(instrument.priceIncrements) {
                     var priceInfo = tradable.findPriceInfo(instrument.priceIncrements, price);
-                    if(priceInfo)
+                    if(priceInfo) {
                         step = priceInfo.increment;
                         decimals = priceInfo.decimals;
+                    }
                 }
                 var rounder = Math.pow(10, decimals);
                 var stepRounded = step * Math.round(price/step);
