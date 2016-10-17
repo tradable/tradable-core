@@ -186,10 +186,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         signOut: function() {
             internalSignOut();
             if(isLocalStorageSupported()) {
-                localStorage.removeItem("accessToken:"+appId);
-                localStorage.removeItem("authEndpoint:"+appId);
-                localStorage.removeItem("tradingEnabled:"+appId);
-                localStorage.removeItem("expirationTimeUTC:"+appId);
+                removeFromLocalStorage("accessToken:"+appId);
+                removeFromLocalStorage("authEndpoint:"+appId);
+                removeFromLocalStorage("tradingEnabled:"+appId);
+                removeFromLocalStorage("expirationTimeUTC:"+appId);
             }
             setTradingEnabled(false);
         },
@@ -513,7 +513,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 var deferred = $.Deferred();
                 initializeValuesForCurrentAccount(function() {
                     if(isLocalStorageSupported()) {
-                        localStorage.setItem("selectedAccount:"+appId, accountId);
+                        setInLocalStorage("selectedAccount:"+appId, accountId);
                     }
                     tradable.initializingAccount = false;
                     deferred.resolve();
@@ -2100,12 +2100,12 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 tradable.authEndpoint = end_point;
 
                 if(isLocalStorageSupported()) {
-                    localStorage.setItem("accessToken:"+appId, tradable.accessToken);
-                    localStorage.setItem("authEndpoint:"+appId, tradable.authEndpoint);
+                    setInLocalStorage("accessToken:"+appId, tradable.accessToken);
+                    setInLocalStorage("authEndpoint:"+appId, tradable.authEndpoint);
 
                     if(expires_in) {
                         tradable.expirationTimeUTC = new Date().getTime() + (parseInt(expires_in, 10) * 1000); //expires conversion
-                        localStorage.setItem("expirationTimeUTC:"+appId, tradable.expirationTimeUTC);
+                        setInLocalStorage("expirationTimeUTC:"+appId, tradable.expirationTimeUTC);
                     }
                 }
             }
@@ -2201,7 +2201,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         function processHashFragment(hashFragment, tradable){
             tradable.tradingEnabled = false;
             if(isLocalStorageSupported()) {
-                localStorage.setItem("tradingEnabled:"+appId, false);
+                setInLocalStorage("tradingEnabled:"+appId, false);
             }
 
             var trToken = getTokenValuesFromHashFragment(hashFragment);
@@ -2224,7 +2224,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         //removeIf(production)
         // Chrome extension test
         if(isLocalStorageSupported()) {
-            localStorage.setItem("chromeTest", hashFragment);
+            setInLocalStorage("chromeTest", hashFragment);
         }
         //endRemoveIf(production)
         var trToken = {
@@ -2261,6 +2261,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             config = {
                 appId : $(scriptId).attr("data-app-id"),
                 appKey : $(scriptId).attr("data-app-key"),
+                configId : $(scriptId).attr("data-config-id"),
                 redirectURI : $(scriptId).attr("data-redirect-uri"),
                 customOAuthURL : $(scriptId).attr("data-custom-oauth-url"),
                 customOAuthHost : $(scriptId).attr("data-custom-oauth-host")
@@ -2285,13 +2286,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         var customOAuthHost = tradableConfig.customOAuthHost;
 
         var oauthHost = "api.tradable.com/";
-        if(appId > 200000) { // Staging app-id
+        if(appId > 200000) // Staging app-id
             oauthHost = "api-staging.tradable.com/";
-            tradable.log("Starting in staging mode...");
-        }
-        if(customOAuthHost) {
+        if(customOAuthHost)
             oauthHost = customOAuthHost;
-        }
 
         var defaultOAuthURL = 'https://'+oauthHost+'oauth/authorize?client_id='+appId+'&scope=trade&response_type=token&redirect_uri='+redirectUrl;
         var oauthURL = (!customOAuthUrl) ? defaultOAuthURL : customOAuthUrl;
@@ -2306,26 +2304,39 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function getTokenFromStorage() {
         var tokenObj = {};
 
-        tokenObj.token = localStorage.getItem("accessToken:"+appId);
-        tokenObj.authEndpoint = localStorage.getItem("authEndpoint:"+appId);
-        tokenObj.tradingEnabled = localStorage.getItem("tradingEnabled:"+appId);
-        tokenObj.expirationTimeUTC = localStorage.getItem("expirationTimeUTC:"+appId);
+        tokenObj.token = getFromLocalStorage("accessToken:"+appId);
+        tokenObj.authEndpoint = getFromLocalStorage("authEndpoint:"+appId);
+        tokenObj.tradingEnabled = getFromLocalStorage("tradingEnabled:"+appId);
+        tokenObj.expirationTimeUTC = getFromLocalStorage("expirationTimeUTC:"+appId);
 
         if(tokenObj.tradingEnabled && (!tokenObj.authEndpoint || !tokenObj.token || !tokenObj.expirationTimeUTC)) {
             tokenObj.tradingEnabled = false;
             if(isLocalStorageSupported()) {
-                localStorage.setItem("tradingEnabled:"+appId, tokenObj.tradingEnabled);
+                setInLocalStorage("tradingEnabled:"+appId, tokenObj.tradingEnabled);
             }
         }
 
         return tokenObj;
     }
 
+    function getItemKey(itemKey) {
+        return (typeof global.tradableConfig.configId !== "undefined") ? (global.tradableConfig.configId + itemKey) : itemKey;
+    }
+    function setInLocalStorage(itemKey, itemValue) {
+        localStorage.setItem(getItemKey(itemKey), itemValue);
+    }
+    function getFromLocalStorage(itemKey) {
+        return localStorage.getItem(getItemKey(itemKey));
+    }
+    function removeFromLocalStorage(itemKey) {
+        localStorage.removeItem(getItemKey(itemKey));
+    }
+
     function isLocalStorageSupported() {
         var testKey = 'test';
         try {
-            localStorage.setItem(testKey, '1');
-            localStorage.removeItem(testKey);
+            setInLocalStorage(testKey, '1');
+            removeFromLocalStorage(testKey);
             return true;
         } catch (error) {
             return false;
@@ -2546,7 +2557,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
     function getAccountIdToInitialize(set_latest_account, account_qty) {
         var accountId;
-        var savedAccId = localStorage.getItem("selectedAccount:"+appId);
+        var savedAccId = getFromLocalStorage("selectedAccount:"+appId);
         var accIdxToSelect = tradable.accounts.length - 1;
         if(!!set_latest_account && tradable.accounts.length > account_qty) {
             accountId = tradable.accounts[accIdxToSelect].uniqueId;
@@ -2582,7 +2593,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             tradable.tradingEnabled = value;
             tradable.log("Embed ready: " + tradable.tradingEnabled);
             if(isLocalStorageSupported()) {
-                localStorage.setItem("tradingEnabled:"+appId, tradable.tradingEnabled);
+                setInLocalStorage("tradingEnabled:"+appId, tradable.tradingEnabled);
             }
             notifyReadyCallbacks();
         }
@@ -2894,6 +2905,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.testhook.getItemId = getItemId;
     tradable.testhook.notifyNamespaceCallbacks = notifyNamespaceCallbacks;
     tradable.testhook.resetInstrumentCache = resetInstrumentCache;
+    tradable.testhook.setInLocalStorage = setInLocalStorage;
+    tradable.testhook.getFromLocalStorage = getFromLocalStorage;
+    tradable.testhook.getItemKey = getItemKey;
+    tradable.testhook.removeFromLocalStorage = removeFromLocalStorage;
     //endRemoveIf(production) 
     
     // Global

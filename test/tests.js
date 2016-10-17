@@ -17,66 +17,84 @@ QUnit.test( "jQuery min version check", function( assert ) {
 });
 
 QUnit.test( "Test tradableConfig object initialization", function( assert ) {
-  assert.ok( tradable.testhook, "Tradable test hook is available" );
-  var appId = "100010";
-  var appKey = "ykuNlWoQRC";
-  var scriptId = "#tradable";
-  var redirectURI = "redirectURI";
-  var customOAuthHost = "customOAuthHost";
-  var customOAuthURL = "customOAuthURL";
+    assert.ok( tradable.testhook, "Tradable test hook is available" );
+    var appId = "100010";
+    var appKey = "ykuNlWoQRC";
+    var configId = "OANDA";
+    var scriptId = "#tradable";
+    var redirectURI = "redirectURI";
+    var customOAuthHost = "customOAuthHost";
+    var customOAuthURL = "customOAuthURL";
 
-  resetConfig();
-  initializeConfig(scriptId, redirectURI, customOAuthHost, customOAuthURL);
-  testConfig("Script ID " + scriptId);
+    resetConfig();
+    initializeConfig(scriptId, redirectURI, customOAuthHost, customOAuthURL);
+    testConfig("Script ID " + scriptId);
 
-  resetConfig();
-  trEmbJQ(scriptId).attr("id", "tradable-embed");
-  scriptId = "#tradable-embed";
-  testConfig("Script ID " + scriptId);
+    resetConfig();
+    trEmbJQ(scriptId).attr("id", "tradable-embed");
+    scriptId = "#tradable-embed";
+    testConfig("Script ID " + scriptId);
 
-  resetConfig();
-  trEmbJQ("#tradable-embed").attr("id", "tradable-api");
-  scriptId = "#tradable-api";
-  testConfig("Script ID " + scriptId);
+    resetConfig();
+    trEmbJQ("#tradable-embed").attr("id", "tradable-api");
+    scriptId = "#tradable-api";
+    testConfig("Script ID " + scriptId);
 
-  resetConfig(scriptId);
+    resetConfig(scriptId);
 
-  window.tradableEmbedConfig = { 'appId': appId, 'appKey': appKey, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
-  testConfig("tradableEmbedConfig object");
+    window.tradableEmbedConfig = { 'appId': appId, 'appKey': appKey, 'configId': configId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+    testConfig("tradableEmbedConfig object");
 
-  resetConfig(scriptId);
+    resetConfig(scriptId);
 
-  window.tradableConfig = { 'appId': appId, 'appKey': appKey, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
-  testConfig("tradableConfig object");
+    window.tradableConfig = { 'appId': appId, 'appKey': appKey, 'configId': configId, 'redirectURI': redirectURI, 'customOAuthHost': customOAuthHost, 'customOAuthURL': customOAuthURL};
+    testConfig("tradableConfig object");
 
 
-  function initializeConfig(scriptId, redirectURI, customOAuthURL, customOAuthHost) {
-      trEmbJQ(scriptId).attr("data-redirect-uri", redirectURI);
-      trEmbJQ(scriptId).attr("data-custom-oauth-url", customOAuthHost);
-      trEmbJQ(scriptId).attr("data-custom-oauth-host", customOAuthURL);
-  }
-  function testConfig(text) {
-      var config = tradable.testhook.initializeTradableConfig();
-      assert.ok( config.appId === appId, text + ": Tradable App Id correctly initialized" );
-      assert.ok( config.appKey === appKey, text + ": Tradable App Key correctly initialized" );
-      assert.ok( config.customOAuthURL === customOAuthURL, text + ": customOAuthURL correctly initialized" );
-      assert.ok( config.customOAuthHost === customOAuthHost, text + ": customOAuthHost correctly initialized" );
-      assert.ok( config.redirectURI === redirectURI, text + ": redirectURI correctly initialized" );
-  }
-  function resetConfig(scriptId) {
-    window.tradableConfig = undefined;
-    window.tradableEmbedConfig = undefined;
-
-    if(scriptId) {
-      trEmbJQ(scriptId).attr("data-app-id", "");
-      trEmbJQ(scriptId).attr("data-app-key", "");
-      trEmbJQ(scriptId).attr("data-redirect-uri", "");
-      trEmbJQ(scriptId).attr("data-custom-oauth-url", "");
-      trEmbJQ(scriptId).attr("data-custom-oauth-host", "");
+    function initializeConfig(scriptId, redirectURI, customOAuthURL, customOAuthHost) {
+        trEmbJQ(scriptId).attr("data-redirect-uri", redirectURI);
+        trEmbJQ(scriptId).attr("data-custom-oauth-url", customOAuthHost);
+        trEmbJQ(scriptId).attr("data-custom-oauth-host", customOAuthURL);
     }
+    function testConfig(text) {
+        var config = tradable.testhook.initializeTradableConfig();
+        assert.ok( config.appId === appId, text + ": Tradable App Id correctly initialized" );
+        assert.ok( config.appKey === appKey, text + ": Tradable App Key correctly initialized" );
+        assert.ok( config.configId === configId, text + ": Tradable Config ID correctly initialized" );
+        assert.ok( config.customOAuthURL === customOAuthURL, text + ": customOAuthURL correctly initialized" );
+        assert.ok( config.customOAuthHost === customOAuthHost, text + ": customOAuthHost correctly initialized" );
+        assert.ok( config.redirectURI === redirectURI, text + ": redirectURI correctly initialized" );
+    }
+    function resetConfig(scriptId) {
+      window.tradableConfig = undefined;
+      window.tradableEmbedConfig = undefined;
 
-    assert.ok( !tradableConfig, "Tradable Config is reset" );
-  }
+      if(scriptId) {
+        trEmbJQ(scriptId).attr("data-app-id", "");
+        trEmbJQ(scriptId).attr("data-app-key", "");
+        trEmbJQ(scriptId).attr("data-config-id", "");
+        trEmbJQ(scriptId).attr("data-redirect-uri", "");
+        trEmbJQ(scriptId).attr("data-custom-oauth-url", "");
+        trEmbJQ(scriptId).attr("data-custom-oauth-host", "");
+      }
+
+      assert.ok( !tradableConfig, "Tradable Config is reset" );
+    }
+});
+
+QUnit.test( "Test localStorage utilities", function( assert ) {
+    var configId = "OANDA";
+
+    testLocalStorage();
+
+    function testLocalStorage() {
+        tradable.testhook.setInLocalStorage("test", "TESTVALUE");
+        assert.ok(tradable.testhook.getItemKey("test") === (configId + "test"), "Item key correctly generated");
+        assert.ok(localStorage.getItem(configId + "test") === "TESTVALUE", "Config id is correctly added on the local storage");
+        assert.ok(tradable.testhook.getFromLocalStorage("test") === "TESTVALUE", "item value is correctly added on the local storage");
+        tradable.testhook.removeFromLocalStorage("test");
+        assert.ok(!tradable.testhook.getFromLocalStorage("test"), "Local storage item is correctly removed");
+    }
 });
 
 var apiToken;
@@ -1036,10 +1054,10 @@ function signOut(assert) {
     tradable.signOut();
     assert.ok(tradable.tradingEnabled === false, "Trading disabled");
 
-    assert.ok(!localStorage.getItem('accessToken'+tradable.app_id), "accessToken removed from storage"+localStorage.getItem('accessToken'+tradable.app_id));
-    assert.ok(!localStorage.getItem('authEndpoint'+tradable.app_id), "authEndpoint removed from storage");
-    assert.ok(!localStorage.getItem('tradingEnabled'+tradable.app_id), "tradingEnabled removed from storage");
-    assert.ok(!localStorage.getItem('expirationTimeUTC'+tradable.app_id), "expirationTimeUTC removed from storage");
+    assert.ok(!tradable.testhook.getFromLocalStorage('accessToken'+tradable.app_id), "accessToken removed from storage"+tradable.testhook.getFromLocalStorage('accessToken'+tradable.app_id));
+    assert.ok(!tradable.testhook.getFromLocalStorage('authEndpoint'+tradable.app_id), "authEndpoint removed from storage");
+    assert.ok(!tradable.testhook.getFromLocalStorage('tradingEnabled'+tradable.app_id), "tradingEnabled removed from storage");
+    assert.ok(!tradable.testhook.getFromLocalStorage('expirationTimeUTC'+tradable.app_id), "expirationTimeUTC removed from storage");
 }
 
 function findPrices(instrumentId, prices) {

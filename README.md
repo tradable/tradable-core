@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.22/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.22.1/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}" data-app-key="{your_app_key}"></script>
 ```
 
@@ -225,6 +225,15 @@ Tradable Core provides a few helper methods to perform different calculations:
 - [calculatePipSize](https://tradable.github.io/js/docs/index.html#tradable.calculatePipSize): Calculates the pip size for an instrument.
 - [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument. Note that it is required to round the order prices so that they are not rejected by the brokerages.
 
+##### Configuration
+
+The following are the configuration (`tradableConfig`) options that can be customized:
+
+- `tradableConfig.appId` (or attr `data-app-id`): App identifier id (**required**)
+- `tradableConfig.appKey` (or attr `data-app-key`): App identifier key (**required**)
+- `tradableConfig.configId` (or attr `data-config-id`): If your app requires to load different account configurations, you can specify different configuration ids.
+- `tradableConfig.redirectURI` (or attr `data-redirect-uri`): Specify to redirect to a different URL than the current one.
+            
 ### Light integration
 
 In order to initialize Tradable Core in light mode you just need to feed it with the Tradable token values:
