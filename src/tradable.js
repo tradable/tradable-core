@@ -608,7 +608,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
-         * Rounds a price for a certain instrument
+         * Rounds a price for a certain instrument using the correspondent decimal number
          * @param {String} instrumentId     The instrument id to calculate the pip size
          * @param {number} price   Price to round
          * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
@@ -617,16 +617,28 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * var roundedPrice = tradable.roundPrice("EURUSD", 1.114919999999998);
          */
         roundPrice : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "price", false);
+        },
+        roundPriceWithIncrement : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "price", true);
+        },
+        roundAmount : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "amount", false);
+        },
+        roundAmountWithIncrement : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "amount", true);
+        },
+        roundNumber: function(instrumentId, price, type, accordingToIncrement) {
             var instrument = tradable.getInstrumentFromId(instrumentId);
             if(instrument && typeof price === "number") {
                 var decimals = instrument.decimals;
                 var step = 1 / Math.pow(10, decimals);
-                if(instrument.priceIncrements) {
-                    var priceInfo = tradable.findPriceInfo(instrument.priceIncrements, price);
-                    if(priceInfo) {
-                        step = priceInfo.increment;
-                        decimals = priceInfo.decimals;
-                    }
+                var band = (!type || type === "price") ? tradable.getPriceBand(instrument, price) :
+                    tradable.getSizeBand(instrument, price);
+                if(band) {
+                    decimals = band.decimals;
+                    if(accordingToIncrement)
+                        step = band.increment;
                 }
                 var rounder = Math.pow(10, decimals);
                 var stepRounded = step * Math.round(price/step);
@@ -636,10 +648,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 return null;
             }
         },
-        findPriceInfo : function(priceIncrements, price) {
+        getPriceBand : function(instrument, value) {
+            return tradable.findBandForValue(instrument.priceIncrements.priceIncrementBands, value);
+        },
+        getSizeBand : function(instrument, value) {
+            return tradable.findBandForValue(instrument.orderSizeIncrements.orderSizeIncrementBands, value);
+        },
+        findBandForValue : function(bands, value) {
             var band = null;
-            $(priceIncrements.priceIncrementBands).each(function(idx, val) {
-                if(val.lowerBound <= price) {
+            $(bands).each(function(idx, val) {
+                if(val.lowerBound <= value) {
                     band = val;
                 } else {
                     return false;
