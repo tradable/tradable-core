@@ -609,8 +609,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
-         * Rounds a price for a certain instrument using the correspondent decimal number
-         * @param {String} instrumentId     The instrument id to calculate the pip size
+         * Rounds a price for a certain instrument using the correspondent decimals
+         * @param {String} instrumentId     The instrument id for the price to round
          * @param {number} price   Price to round
          * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
          * @example
@@ -620,14 +620,41 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         roundPrice : function(instrumentId, price) {
             return tradable.roundNumber(instrumentId, price, "price", false);
         },
+        /**
+         * Rounds a price for a certain instrument using the correspondent decimals AND increment
+         * @param {String} instrumentId     The instrument id for the price to round
+         * @param {number} price   Price to round
+         * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded price should be 511.25 considering that the increment for it is 0.25
+         * var roundedPrice = tradable.roundPriceWithIncrement("80813968", 511.22222);
+         */
         roundPriceWithIncrement : function(instrumentId, price) {
             return tradable.roundNumber(instrumentId, price, "price", true);
         },
-        roundAmount : function(instrumentId, price) {
-            return tradable.roundNumber(instrumentId, price, "amount", false);
+        /**
+         * Rounds an amount for a certain instrument using the correspondent decimals
+         * @param {String} instrumentId     The instrument id for the amount to round
+         * @param {number} amount   Amount to round
+         * @returns {number} Rounded amount or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded amount should be 10000
+         * var roundedAmount = tradable.roundAmount("EURUSD", 10000.1149);
+         */
+        roundAmount : function(instrumentId, amount) {
+            return tradable.roundNumber(instrumentId, amount, "amount", false);
         },
-        roundAmountWithIncrement : function(instrumentId, price) {
-            return tradable.roundNumber(instrumentId, price, "amount", true);
+        /**
+         * Rounds an amount for a certain instrument using the correspondent decimals AND increment
+         * @param {String} instrumentId     The instrument id for the amount to round
+         * @param {number} amount   Amount to round
+         * @returns {number} Rounded amount or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded amount should be 10000 considering that the increment is 1
+         * var roundedAmount = tradable.roundAmount("EURUSD", 10000.1149);
+         */
+        roundAmountWithIncrement : function(instrumentId, amount) {
+            return tradable.roundNumber(instrumentId, amount, "amount", true);
         },
         roundNumber: function(instrumentId, price, type, accordingToIncrement) {
             var instrument = tradable.getInstrumentFromId(instrumentId);
