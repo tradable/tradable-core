@@ -32,7 +32,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     var oauthEndpoint = formOAuthEndpoint(redirectUrl);
     var tokenObj = getTokenFromStorage();
 
-    var availableEvents = ["embedStarting", "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "execution", "error"];
+    var availableEvents = ["embedStarting", "embedReady", "accountUpdated", "accountSwitch", "twoFactorAuthentication", "tokenExpired", "tokenWillExpire", "reLoginRequired", "execution", "error"];
     var callbackHolder = {};
     var accountSwitchCallbacks = [], accountUpdatedCallbacks = [], accountUpdatedCallbackHashes = [], 
         tokenExpirationCallbacks = [], tokenWillExpireCallbacks = [], errorCallbacks = [];
@@ -200,9 +200,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         /**
          * Add an event listener with an specific name that can be turned off calling 'off'.
          * @param      {String} namespace    A unique name that will identify your listener and that you will have to use to turn the listener off 
-         * @param      {String} eventName   The available events are "embedStarting", "embedReady", "accountUpdated", "accountSwitch", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"
+         * @param      {String} eventName   The available events are "embedStarting", "embedReady", "accountUpdated", "accountSwitch", "twoFactorAuthentication", "tokenExpired", "tokenWillExpire", "reLoginRequired", "error"
          * @param      {Function} callback  Event listener callback function
          * @example
+         * // Read more: https://github.com/tradable/tradable-core#additional-events
          * tradable.on("yourCustomNamespace", "accountUpdated", function(snapshot) {
          *      console.log("Notified with every snapshot..");
          * });
@@ -443,7 +444,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         makeOsRequest : function (reqType, type, accountId, method, postData, resolve, reject){
             var version = (reqType === "internal") ? "" : "v1/";
             var endpoint;
-            if(reqType !== "user" && reqType !== "accounts") {
+            if(reqType === tradable.TWO_FACTOR_AUTH) {
+                endpoint = postData.endpointURL;
+                postData = { "token" : postData.token };
+            } else if(reqType !== "user" && reqType !== "accounts") {
                 endpoint = 'https://'+tradable.oauth_host;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
                 endpoint = tradable.authEndpoint;
@@ -466,8 +470,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 xhrFields: {
                     withCredentials: true
                 },
-                url: (!!accountId && accountId.length > 0) ? (endpoint + version + reqType + "/" + accountId + "/" + method)
-                                                           : (endpoint + version + reqType + "/" + method),
+                url: (reqType === tradable.TWO_FACTOR_AUTH) ? endpoint :
+                     (!!accountId && accountId.length > 0)  ? (endpoint + version + reqType + "/" + accountId + "/" + method)
+                                                            : (endpoint + version + reqType + "/" + method),
                 contentType: "application/json; charset=utf-8",
                 data: (postData) ? JSON.stringify(postData) : undefined,
                 dataType: 'json'
@@ -477,7 +482,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
                         if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
-                            if(tradable.isReLoginRequired(jqXHR)) {
+                            if(tradable.isTwoFactorAuthenticationRequired(jqXHR)) {
+                                handleTwoFactorAuthenticationChallenge(jqXHR.responseJSON);
+                            } else if(tradable.isReLoginRequired(jqXHR)) {
                                 notifyReloginRequiredCallbacks();
                             } else if(tradable.isTokenExpiredCode(jqXHR)) {
                                 notifyTokenExpired();
@@ -485,8 +492,10 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                                 setTradingEnabled(false);
                             }
                         }
-                        if(!tradable.isReLoginRequired(jqXHR)) {
+                        if(!tradable.isReLoginRequired(jqXHR) && !tradable.isTwoFactorAuthenticationRequired(jqXHR)) {
                             notifyErrorCallbacks(jqXHR.responseJSON);
+                            if(tradable.processingTwoFactorAuthentication)
+                                handleTwoFactorAuthenticationFailure(jqXHR);
                         }
                     }
                 });
@@ -543,6 +552,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         },
         isTokenExpiredCode: function (err) {
             return tradable.isErrorCode(err, 1007);
+        },
+        isTwoFactorAuthenticationRequired: function (err) {
+            return tradable.isErrorCode(err, 2701);
         },
         isErrorCode : function(err, code) {
             return (!!err && !!err.responseJSON && err.responseJSON.httpStatus === 403 && err.responseJSON.code === code);
@@ -609,8 +621,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             return instrument;
         },
         /**
-         * Rounds a price for a certain instrument
-         * @param {String} instrumentId     The instrument id to calculate the pip size
+         * Rounds a price for a certain instrument using the correspondent decimals
+         * @param {String} instrumentId     The instrument id for the price to round
          * @param {number} price   Price to round
          * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
          * @example
@@ -618,14 +630,80 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * var roundedPrice = tradable.roundPrice("EURUSD", 1.114919999999998);
          */
         roundPrice : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "price", false);
+        },
+        /**
+         * Rounds a price for a certain instrument using the correspondent decimals AND increment
+         * @param {String} instrumentId     The instrument id for the price to round
+         * @param {number} price   Price to round
+         * @returns {number} Rounded price or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded price should be 511.25 considering that the increment for it is 0.25
+         * var roundedPrice = tradable.roundPriceWithIncrement("80813968", 511.22222);
+         */
+        roundPriceWithIncrement : function(instrumentId, price) {
+            return tradable.roundNumber(instrumentId, price, "price", true);
+        },
+        /**
+         * Rounds an amount for a certain instrument using the correspondent decimals
+         * @param {String} instrumentId     The instrument id for the amount to round
+         * @param {number} amount   Amount to round
+         * @returns {number} Rounded amount or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded amount should be 10000
+         * var roundedAmount = tradable.roundAmount("EURUSD", 10000.1149);
+         */
+        roundAmount : function(instrumentId, amount) {
+            return tradable.roundNumber(instrumentId, amount, "amount", false);
+        },
+        /**
+         * Rounds an amount for a certain instrument using the correspondent decimals AND increment
+         * @param {String} instrumentId     The instrument id for the amount to round
+         * @param {number} amount   Amount to round
+         * @returns {number} Rounded amount or null if the provided instrument is not found/invalid number
+         * @example
+         * // In the following example the returned rounded amount should be 10000 considering that the increment is 1
+         * var roundedAmount = tradable.roundAmount("EURUSD", 10000.1149);
+         */
+        roundAmountWithIncrement : function(instrumentId, amount) {
+            return tradable.roundNumber(instrumentId, amount, "amount", true);
+        },
+        roundNumber: function(instrumentId, price, type, accordingToIncrement) {
             var instrument = tradable.getInstrumentFromId(instrumentId);
             if(instrument && typeof price === "number") {
-                var rounder = Math.pow(10, instrument.decimals);
-                return (Math.round(price * rounder) / rounder);
+                var decimals = instrument.decimals;
+                var step = 1 / Math.pow(10, decimals);
+                var band = (!type || type === "price") ? tradable.getPriceBand(instrument, price) :
+                    tradable.getSizeBand(instrument, price);
+                if(band) {
+                    decimals = band.decimals;
+                    if(accordingToIncrement)
+                        step = band.increment;
+                }
+                var rounder = Math.pow(10, decimals);
+                var stepRounded = step * Math.round(price/step);
+                return Math.round(stepRounded * rounder) / rounder;
             } else {
                 tradable.warn((typeof price !== "number") ? ("Invalid number: " + price) : ("'" + instrumentId + "' instrument not found"));
                 return null;
             }
+        },
+        getPriceBand : function(instrument, value) {
+            return tradable.findBandForValue(instrument.priceIncrements.priceIncrementBands, value);
+        },
+        getSizeBand : function(instrument, value) {
+            return tradable.findBandForValue(instrument.orderSizeIncrements.orderSizeIncrementBands, value);
+        },
+        findBandForValue : function(bands, value) {
+            var band = null;
+            $(bands).each(function(idx, val) {
+                if(val.lowerBound <= value) {
+                    band = val;
+                } else {
+                    return false;
+                }
+            });
+            return band;
         },
         /**
          * Calculates the pip size for an instrument
@@ -2448,7 +2526,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     function gatherForexInstrumentIds(instrumentResults) {
         var results = 0;
         $(instrumentResults).each(function(idx, instrumentResult) {
-            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) && results < 16) {
+            if((instrumentResult.symbol.length === 6 || instrumentResult.symbol.length === 7) &&
+                    (results < 11 || instrumentResult.symbol === "EURUSD")) { //EURUSD is allowed for the tests to be able to work
                 idsToRequest.push(instrumentResult.instrumentId);
                 results++;
             }
@@ -2666,6 +2745,50 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return deferred;
     }
 
+    /*
+     * Two factor authentication logic
+     */
+    tradable.processingTwoFactorAuthentication = false;
+    tradable.TWO_FACTOR_AUTH = "twoFactorAuthentication";
+    tradable.TWO_FACTOR_AUTH_STATUS = {
+        RECEIVED : "received",
+        BEATEN : "beaten",
+        FAILED : "failed"
+    };
+    function handleTwoFactorAuthenticationChallenge(twoFactorChallenge) {
+        if(!tradable.processingTwoFactorAuthentication) {
+            tradable.processingTwoFactorAuthentication = true;
+            tradable.log("Two factor authentication challenge received");
+            notifyNamespaceCallbacks("twoFactorAuthentication", {
+                status: tradable.TWO_FACTOR_AUTH_STATUS.RECEIVED,
+                instruction: twoFactorChallenge.instruction
+            });
+            if(tradable.tradingEnabled)
+                setTradingEnabled(false);
+        }
+
+        tradable.makeOsRequest(tradable.TWO_FACTOR_AUTH, "POST", "", "", twoFactorChallenge).then(function (apiAuthentication) {
+            tradable.processingTwoFactorAuthentication = false;
+            tradable.log("Two factor authentication challenge beaten");
+            notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.BEATEN });
+            if(apiAuthentication.apiTokenValue) {
+                tradable.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            }
+        });
+    }
+
+    function handleTwoFactorAuthenticationFailure(jqXHR) {
+        tradable.processingTwoFactorAuthentication = false;
+        tradable.warn("Two factor authentication challenge failed");
+        notifyNamespaceCallbacks("twoFactorAuthentication", {
+            status: tradable.TWO_FACTOR_AUTH_STATUS.FAILED,
+            error: jqXHR.responseJSON
+        });
+    }
+
+    /*
+     * Token expired, Error, Account Switch and Re-login notifications
+     */
     function notifyTokenExpired() {
         tradable.log("Token expired");
         setTradingEnabled(false);
@@ -2695,6 +2818,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         notifyNamespaceCallbacks("reLoginRequired");
     }
 
+    /*
+     * Callbacks logic
+     */
     function notifyNamespaceCallbacks(eventName, data) {
         if(tradable.isEventValid(eventName)) {
             if(typeof callbackHolder[eventName] !== undefined) {
