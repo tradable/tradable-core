@@ -445,7 +445,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var endpoint;
             if(reqType === tradable.TWO_FACTOR_AUTH) {
                 endpoint = postData.endpointURL;
-                postData = { "token" : postData.token };
+                postData = { "twoFactorAuthenticationToken" : postData.twoFactorAuthenticationToken };
             } else if(reqType !== "user" && reqType !== "accounts") {
                 endpoint = 'https://'+tradable.oauth_host;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
@@ -2757,7 +2757,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.TWO_FACTOR_AUTH = "twoFactorAuthentication";
     tradable.TWO_FACTOR_AUTH_STATUS = {
         RECEIVED : "received",
-        BEATEN : "beaten",
+        PASSED : "passed",
         FAILED : "failed"
     };
     function handleTwoFactorAuthenticationChallenge(twoFactorChallenge) {
@@ -2774,8 +2774,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
         tradable.makeOsRequest(tradable.TWO_FACTOR_AUTH, "POST", "", "", twoFactorChallenge).then(function (apiAuthentication) {
             tradable.processingTwoFactorAuthentication = false;
-            tradable.log("Two factor authentication challenge beaten");
-            notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.BEATEN });
+            tradable.log("Two factor authentication challenge passed");
+            notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.PASSED });
             if(apiAuthentication.apiTokenValue) {
                 tradable.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
             }
@@ -3035,7 +3035,9 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.testhook.getFromLocalStorage = getFromLocalStorage;
     tradable.testhook.getItemKey = getItemKey;
     tradable.testhook.removeFromLocalStorage = removeFromLocalStorage;
-    //endRemoveIf(production) 
+    tradable.testhook.handleTwoFactorAuthenticationChallenge = handleTwoFactorAuthenticationChallenge;
+    tradable.testhook.handleTwoFactorAuthenticationFailure = handleTwoFactorAuthenticationFailure;
+    //endRemoveIf(production)
     
     // Global
     global.trEmbJQ = trEmbJQ;

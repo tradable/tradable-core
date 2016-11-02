@@ -82,6 +82,39 @@ QUnit.test( "Test tradableConfig object initialization", function( assert ) {
     }
 });
 
+QUnit.test("Test twoFactorAuthentication", function ( assert ) {
+    var testObj = {test: "test", instruction: "test"};
+    var counter = 0;
+
+    assert.ok(!tradable.processingTwoFactorAuthentication, "processingTwoFactorAuthentication is false");
+
+    tradable.on("unitTest2fListener", "twoFactorAuthentication", function (twoFactorObj) {
+        assert.ok(twoFactorObj.instruction = testObj.instruction, "Received instruction");
+        assert.ok(twoFactorObj.status === "received", "Received correct status received: " + twoFactorObj.status);
+        assert.ok(tradable.processingTwoFactorAuthentication, "processingTwoFactorAuthentication is true");
+        counter++;
+    });
+
+    tradable.testhook.handleTwoFactorAuthenticationChallenge(testObj);
+    assert.ok(counter === 1, "Received listener notified");
+
+    counter = 0;
+    tradable.off("unitTest2fListener");
+
+    tradable.on("unitTest2fListener", "twoFactorAuthentication", function (twoFactorObj) {
+        assert.ok(twoFactorObj.error = testObj, "Received error object");
+        assert.ok(twoFactorObj.status === "failed", "Received correct status failed: " + twoFactorObj.status);
+        assert.ok(!tradable.processingTwoFactorAuthentication, "processingTwoFactorAuthentication is false");
+        counter++;
+    });
+
+    tradable.testhook.handleTwoFactorAuthenticationFailure(testObj);
+
+    assert.ok(counter === 1, "Fail listener notified");
+    tradable.off("unitTest2fListener");
+});
+
+
 QUnit.test( "Test localStorage utilities", function( assert ) {
     var configId = "OANDA";
 
