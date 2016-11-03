@@ -45,7 +45,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.23',
+        version : 'trEmbDevVersionX',
         app_id: appId,
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
@@ -2773,6 +2773,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.PASSED });
             if(apiAuthentication.apiTokenValue) {
                 tradable.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            } else {
+                tradable.enableTrading(tradable.accessToken, tradable.authEndpoint);
             }
         });
     }

@@ -231,6 +231,12 @@ Gets called back every 5 minutes when the remaining token time is less than 30 m
 ```javascript
 tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMillis) {});
 ```
+[//]: # (##### Rounding)
+[//]: # (The prices and amounts need to be rounded in order to ensure that they will be accepted by the trading system.)
+[//]: # (- [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument according to the required decimals. To be used for displaying received prices.)
+[//]: # (- [roundPriceWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundPriceWithIncrement): When the user is entering a price for an order, this method needs to be used to ensure a valid price. The user must always see the final price before sending an order.)
+[//]: # (- [roundAmount](https://tradable.github.io/js/docs/index.html#tradable.roundAmount): Rounds an amount (order size) according to the required decimals.)
+[//]: # (- [roundAmountWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundAmountWithIncrement): Rounds an amount (order size) according to the order size decimals and increments. It is not required to round the amounts according to the increments for them to be accepted by a brokerage, but this method will provide the closest recommended order size.)
 
 ##### Calculation utilities
 

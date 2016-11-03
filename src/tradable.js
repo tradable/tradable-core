@@ -2778,6 +2778,8 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.PASSED });
             if(apiAuthentication.apiTokenValue) {
                 tradable.enableTrading(apiAuthentication.apiTokenValue, apiAuthentication.apiEndpoint, apiAuthentication.expires);
+            } else {
+                tradable.enableTrading(tradable.accessToken, tradable.authEndpoint);
             }
         });
     }
