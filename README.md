@@ -191,11 +191,8 @@ tradable.on("myReloginListener", "reLoginRequired", function() {});
 ```
 
 [//]: # (###### Two factor authentication)
-[//]: # ()
 [//]: # (Some brokers require the user to use multiple authentication factors. For those, the ``twoFactorAuthentication`` listener needs to be used. So far, the only type of two factor authentication we have requires the users to use their phones to pass the two-factor authentication challenge. Therefore, it is no required to send any pin code like other systems usually require. The detection of the challenge, the completion and the failure is automatically handled by the SDK.) 
-[//]: # ()
 [//]: # (For every challenge, the listener will be notified with different statuses that can be seen in the JS example below:)
-[//]: # ()
 [//]: # (```javascript)
 [//]: # (tradable.on("my2fAuthListener", "twoFactorAuthentication", function(twoFactorObj) {)
 [//]: # (    if(twoFactorObj.status === "received") {)
@@ -207,7 +204,6 @@ tradable.on("myReloginListener", "reLoginRequired", function() {});
 [//]: # (    })
 [//]: # (});)
 [//]: # (```)
-[//]: # ()
 ###### Errors
 
 Gets called when a general error occurs, for example an account initialization error due to a password change. 
