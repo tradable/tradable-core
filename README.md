@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.22.1/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.23/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}" data-app-key="{your_app_key}"></script>
 ```
 
@@ -190,20 +190,24 @@ Sometimes, when the user connects an account from multiple clients at a time, a 
 tradable.on("myReloginListener", "reLoginRequired", function() {});
 ```
 
-[//]: # (###### Two factor authentication)
-[//]: # (Some brokers require the user to use multiple authentication factors. For those, the ``twoFactorAuthentication`` listener needs to be used. So far, the only type of two factor authentication we have requires the users to use their phones to pass the two-factor authentication challenge. Therefore, it is no required to send any pin code like other systems usually require. The detection of the challenge, the completion and the failure is automatically handled by the SDK.) 
-[//]: # (For every challenge, the listener will be notified with different statuses that can be seen in the JS example below:)
-[//]: # (```javascript)
-[//]: # (tradable.on("my2fAuthListener", "twoFactorAuthentication", function(twoFactorObj) {)
-[//]: # (    if(twoFactorObj.status === "received") {)
-[//]: # (        // A notification needs to be shown with the received twoFactorObj.instruction)
-[//]: # (    } else if(twoFactorObj.status === "passed") {)
-[//]: # (        // The two factor authentication has been passed and the notification can be hidden)
-[//]: # (    } else if(twoFactorObj.status === "failed") {)
-[//]: # (        // Something went wrong and the notification can be hidden, but the received twoFactorObj.error should be displayed)
-[//]: # (    })
-[//]: # (});)
-[//]: # (```)
+###### Two factor authentication
+
+Some brokers require the user to use multiple authentication factors. For those, the ``twoFactorAuthentication`` listener needs to be used. So far, the only type of two factor authentication we have requires the users to use their phones to pass the two-factor authentication challenge. Therefore, it is not required to send any pin code like other systems usually require. 
+
+The detection of the challenge, the completion and the failure are automatically handled by the SDK. In other words, all you need to do is show a notification with the received instruction and hide it according to the events. For every challenge, the listener will be notified with different statuses that can be seen in the JS example below:
+
+```javascript
+tradable.on("my2fAuthListener", "twoFactorAuthentication", function(twoFactorObj) {
+    if(twoFactorObj.status === "received") {
+        // A notification needs to be shown with the received twoFactorObj.instruction
+    } else if(twoFactorObj.status === "passed") {
+        // The two factor authentication has been passed and the notification can be hidden
+    } else if(twoFactorObj.status === "failed") {
+        // Something went wrong and the notification can be hidden, but the received twoFactorObj.error should be displayed
+    }
+});
+```
+
 ###### Errors
 
 Gets called when a general error occurs, for example an account initialization error due to a password change. 
@@ -227,12 +231,15 @@ Gets called back every 5 minutes when the remaining token time is less than 30 m
 ```javascript
 tradable.on("myTokenWillExpireListener", "tokenWillExpire", function(remainingMillis) {});
 ```
-[//]: # (##### Rounding)
-[//]: # (The prices and amounts need to be rounded in order to ensure that they will be accepted by the trading system.)
-[//]: # (- [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument according to the required decimals. To be used for displaying received prices.)
-[//]: # (- [roundPriceWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundPriceWithIncrement): When the user is entering a price for an order, this method needs to be used to ensure a valid price. The user must always see the final price before sending an order.)
-[//]: # (- [roundAmount](https://tradable.github.io/js/docs/index.html#tradable.roundAmount): Rounds an amount (order size) according to the required decimals.)
-[//]: # (- [roundAmountWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundAmountWithIncrement): Rounds an amount (order size) according to the order size decimals and increments. It is not required to round the amounts according to the increments for them to be accepted by a brokerage, but this method will provide the closest recommended order size.)
+
+##### Rounding
+
+The prices and amounts need to be rounded in order to ensure that they will be accepted by the trading system.
+
+- [roundPrice](https://tradable.github.io/js/docs/index.html#tradable.roundPrice): Rounds a price for a certain instrument according to the required decimals. To be used for displaying received prices.
+- [roundPriceWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundPriceWithIncrement): When the user is entering a price for an order, this method needs to be used to ensure a valid price. The user must always see the final price before sending an order.
+- [roundAmount](https://tradable.github.io/js/docs/index.html#tradable.roundAmount): Rounds an amount (order size) according to the required decimals.
+- [roundAmountWithIncrement](https://tradable.github.io/js/docs/index.html#tradable.roundAmountWithIncrement): Rounds an amount (order size) according to the order size decimals and increments. It is not required to round the amounts according to the increments for them to be accepted by a brokerage, but this method will provide the closest recommended order size.
 
 ##### Calculation utilities
 
