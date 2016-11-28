@@ -464,10 +464,26 @@ function placeProtectedOrder(assert, instrumentId, checkTPSL) {
     var side = "SELL";
     var amt = 1000;
 
-    assert.throws(function () { tradable.placeProtectedOrder(amt, null, side, instrumentId, "MARKET", null, null, null); }, "Null price with Market order throws exception");
-    assert.throws(function () { tradable.placeProtectedOrder(amt, 1.12, side, instrumentId, "MARKET", null, null, null); }, "Invalid price with Market order throws exception");
-    assert.throws(function () { tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", 1.15, 1.12, undefined); }, "Invalid bid ask with Market order throws exception");
-    assert.throws(function () { tradable.placeProtectedOrder(amt, null, side, instrumentId, "LIMIT", null, null, undefined); }, "Invalid price for Limit order throws exception");
+    // (type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice)
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "SELL", null, null, null, null); }, "Null price with Market order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "SELL", 1.12, null, null, null); }, "Invalid price with Market order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "SELL", 0, undefined, 1.15, 1.12); }, "Invalid bid ask with Market order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("LIMIT", "SELL", null, undefined, null, null); }, "Invalid price for Limit order throws exception");
+
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "BUY", 0, 1.12, 1.11, 1.11); }, "BUY MARKET - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "BUY", 0, 1.12, 1.13, 1.13); }, "BUY MARKET - Invalid price for Stop Loss order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "SELL", 0, 1.12, 1.13, 1.13); }, "SELL MARKET - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("MARKET", "SELL", 0, 1.12, 1.11, 1.11); }, "SELL MARKET - Invalid price for Stop Loss order throws exception");
+
+    assert.throws(function () { tradable.validateOrderParams("LIMIT", "BUY", 1.12, null, 1.11, 1.11); }, "BUY LIMIT - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("LIMIT", "BUY", 1.12, null, 1.13, 1.13); }, "BUY LIMIT - Invalid price for Stop Loss order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("LIMIT", "SELL", 1.12, null, 1.13, 1.13); }, "BUY LIMIT - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("LIMIT", "SELL", 1.12, null, 1.11, 1.11); }, "BUY LIMIT - Invalid price for Stop Loss order throws exception");
+
+    assert.throws(function () { tradable.validateOrderParams("STOP", "BUY", 1.12, null, 1.11, 1.11); }, "BUY STOP - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("STOP", "BUY", 1.12, null, 1.13, 1.13); }, "BUY STOP - Invalid price for Stop Loss order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("STOP", "SELL", 1.12, null, 1.13, 1.13); }, "BUY STOP - Invalid price for Take Profit order throws exception");
+    assert.throws(function () { tradable.validateOrderParams("STOP", "SELL", 1.12, null, 1.11, 1.11); }, "BUY STOP - Invalid price for Stop Loss order throws exception");
 
     tradable.getPrices([instrumentId]).then(function (prices) {
         var bidPrice = prices[0].bid;
@@ -1107,6 +1123,30 @@ QUnit.test("Tradable logging", function ( assert ) {
     assert.ok(true, "Tradable logging does not break");
 });
 
+QUnit.test("jqXHR object creation", function ( assert ) {
+    var code = 1069;
+    var errMsg = "My test err message";
+    var debug = "This is my debug message";
+    var details = "These are my details";
+
+    var jqXHR = tradable.testhook.fakejqXHRObject(code, errMsg, debug);
+
+    assert.ok(jqXHR.status === 400, "jqXHR status is correctly set");
+    assert.ok(jqXHR.responseJSON.httpStatus === 400, "jqXHR responseJSON httpStatus code is correctly set in responseJSON");
+
+    assert.ok(jqXHR.readyState === 4, "jqXHR readyState is correctly set");
+    assert.ok(jqXHR.statusText === "Bad Request", "jqXHR statusText is correctly set");
+    assert.ok(jqXHR.responseJSON.code === code, "jqXHR code is correctly set in responseJSON");
+    assert.ok(jqXHR.responseJSON.message === errMsg, "jqXHR errMsg is correctly set");
+    assert.ok(jqXHR.responseJSON.debug === debug, "jqXHR errMsg is correctly set");
+
+    assert.ok(JSON.stringify(JSON.parse(jqXHR.responseText)) === JSON.stringify(jqXHR.responseJSON), "jqXHR responseText and responseJSON are equivalent");
+    assert.ok(!jqXHR.responseJSON.details, "jqXHR details are not set when not sent");
+
+    jqXHR = tradable.testhook.fakejqXHRObject(code, errMsg, debug, details);
+    assert.ok(jqXHR.responseJSON.details === details, "jqXHR details are set when sent");
+});
+
 QUnit.test("Sign Out", function ( assert ) {
     signOut(assert);
 });
@@ -1180,8 +1220,8 @@ function getAnonymousId() {
         type: "GET",
         crossDomain: true,
         xhrFields: {
-      withCredentials: true
-    },
+          withCredentials: true
+        },
         url: 'https://' + tradable.oauth_host + '/analyticsId?'+window.location.host,
         contentType: "application/json; charset=utf-8",
         dataType: 'json'

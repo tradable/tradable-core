@@ -1542,16 +1542,26 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          * _object-callback-begin_Order_object-callback-end_
          */
         placeProtectedOrderForAccount : function (accountId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
-            tradable.validateOrderParams(type, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice);
+            var deferred = new $.Deferred();
+            var error;
+            try {
+                tradable.validateOrderParams(type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice);
+            } catch(errMsg) {
+                deferred.reject(fakejqXHRObject(1, errMsg, "Sending wrong params to the 'placeProtectedOrderForAccount' method."));
+            }
 
-            var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
+            if(!error) {
+                var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
 
-            var priceForDistance = (type === "MARKET") ? currentBidOrAskPrice : price;
-            $.extend(orderCommand, tradable.getOrderProtections(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance));
+                var priceForDistance = (type === "MARKET") ? currentBidOrAskPrice : price;
+                $.extend(orderCommand, tradable.getOrderProtections(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance));
 
-            return tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
+                deferred = tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
+            }
+
+            return resolveDeferred(deferred, resolve, reject);
         },
-        validateOrderParams : function (type, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice) {
+        validateOrderParams : function (type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice) {
             if(type === "MARKET") {
                 if((takeProfitPrice || stopLossPrice) && (typeof currentBidOrAskPrice !== "number" || !currentBidOrAskPrice)) {
                     throw "MARKET orders require a valid 'currentBidOrAskPrice'";
@@ -1560,6 +1570,16 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                 }
             } else if(type !== "MARKET" && (typeof price !== "number" || !price)) {
                 throw "LIMIT and STOP orders require a valid order price";
+            }
+
+            var refPrice = (type === "MARKET") ? currentBidOrAskPrice : price;
+            if((takeProfitPrice && side === "BUY" && takeProfitPrice < refPrice) ||
+               (takeProfitPrice && side === "SELL" && takeProfitPrice > refPrice)) {
+                throw "Take profit order is on the wrong side";
+            }
+            if((stopLossPrice && side === "BUY" && stopLossPrice > refPrice) ||
+                (stopLossPrice && side === "SELL" && stopLossPrice < refPrice)) {
+                throw "Stop loss order is on the wrong side";
             }
         },
         /**
@@ -2988,6 +3008,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         return deferred;
     }
 
+    function fakejqXHRObject(code, errMsg, debug, details) {
+        var error = { "httpStatus": 400, "code": code, "message": errMsg, "debug": debug };
+        if(details)
+            $.extend(error, {"details": details});
+        return {
+            "readyState": 4,
+            "status": error.httpStatus,
+            "statusText": "Bad Request",
+            "responseJSON": error,
+            "responseText": JSON.stringify(error)
+        };
+    }
+
     function hashCode(str){
         var i;
         var char;
@@ -3039,6 +3072,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     tradable.testhook.removeFromLocalStorage = removeFromLocalStorage;
     tradable.testhook.handleTwoFactorAuthenticationChallenge = handleTwoFactorAuthenticationChallenge;
     tradable.testhook.handleTwoFactorAuthenticationFailure = handleTwoFactorAuthenticationFailure;
+    tradable.testhook.fakejqXHRObject = fakejqXHRObject;
     //endRemoveIf(production)
     
     // Global
