@@ -602,6 +602,24 @@ QUnit.test( "Place, Modify Protected Order, Cancel TP and Cancel SL DISTANCE", f
     modifyProtectedOrder(assert, instrumentId, true);
 });
 
+QUnit.test( "Place Protected Order - Order is rejected when validation fails", function( assert ) {
+    var done = assert.async();
+
+    var type = "MARKET"; var side = "BUY"; var price = 0; var currentBidOrAskPrice = 1.12; var takeProfitPrice = 1.11; var stopLossPrice = 1.11;
+
+    // (type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice)
+    assert.throws(function () { tradable.validateOrderParams(type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice); }, "BUY MARKET - Invalid price for Take Profit order throws exception");
+
+    //(amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject)
+    tradable.placeProtectedOrder(1000, price, side, "EURUSD", type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice).then(function () {
+        QUnit.pushFailure("Order should have been rejected");
+        done();
+    }, function (error) {
+        assert.ok(true, "Order was rejected: " + JSON.stringify(error));
+        done();
+    });
+});
+
 QUnit.test("Test Execution listener", function ( assert ) {
     assert.ok(tradable.accountUpdateInterval === null, "Account updates not started..");
     tradable.on("testListener", "execution", function() {});

@@ -1543,21 +1543,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
          */
         placeProtectedOrderForAccount : function (accountId, amount, price, side, instrumentId, type, takeProfitPrice, stopLossPrice, currentBidOrAskPrice, resolve, reject) {
             var deferred = new $.Deferred();
-            var error;
             try {
                 tradable.validateOrderParams(type, side, price, currentBidOrAskPrice, takeProfitPrice, stopLossPrice);
             } catch(errMsg) {
                 deferred.reject(fakejqXHRObject(1, errMsg, "Sending wrong params to the 'placeProtectedOrderForAccount' method."));
+                return resolveDeferred(deferred, resolve, reject);
             }
 
-            if(!error) {
-                var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
+            var orderCommand = {'amount': amount, 'price': price, 'side': side, 'instrumentId': instrumentId, 'type': type};
 
-                var priceForDistance = (type === "MARKET") ? currentBidOrAskPrice : price;
-                $.extend(orderCommand, tradable.getOrderProtections(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance));
+            var priceForDistance = (type === "MARKET") ? currentBidOrAskPrice : price;
+            $.extend(orderCommand, tradable.getOrderProtections(accountId, instrumentId, takeProfitPrice, stopLossPrice, priceForDistance));
 
-                deferred = tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
-            }
+            deferred = tradable.makeAccountRequest("POST", accountId, "orders/", orderCommand, resolve, reject);
 
             return resolveDeferred(deferred, resolve, reject);
         },
