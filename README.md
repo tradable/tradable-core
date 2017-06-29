@@ -28,7 +28,7 @@ If you don't need to bundle Tradable core in your code base, then you can simply
 
 ```html
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript" ></script>
-<script src="//js-api.tradable.com/core/1.23/tradable.min.js" type="text/javascript" 
+<script src="//js-api.tradable.com/core/1.24/tradable.min.js" type="text/javascript" 
         id="tradable" data-app-id="{your_app_id}" data-app-key="{your_app_key}"></script>
 ```
 
@@ -192,9 +192,13 @@ tradable.on("myReloginListener", "reLoginRequired", function() {});
 
 ###### Two factor authentication
 
-Some brokers require the user to use multiple authentication factors. For those, the ``twoFactorAuthentication`` listener needs to be used. So far, the only type of two factor authentication we have requires the users to use their phones to pass the two-factor authentication challenge. Therefore, it is not required to send any pin code like other systems usually require. 
+Some brokers require the user to use multiple authentication factors. For those, the ``twoFactorAuthentication`` listener needs to be used. We have 2 types of 2 factor authentication, one requires for the user to send a code and the other requires do user to click a link on their phone.
 
-The detection of the challenge, the completion and the failure are automatically handled by the SDK. In other words, all you need to do is show a notification with the received instruction and hide it according to the events. For every challenge, the listener will be notified with different statuses that can be seen in the JS example below:
+The listener sends an object, let's call it ``twoFactorObj``:
+- If the ``twoFactorObj.requiresUserInput`` is ``true``, you will need to let the user enter a code and send it through ``tradable.submitTwoFactorAuthenticationCode(userCode)``.
+- If ``twoFactorObj.requiresUserInput`` is false, the sdk will automatically know when the user has completed the two factor authentication challenge and no method call is required.
+
+The detection of the challenge, the completion and the failure are handled by the SDK. For every challenge, the listener will be notified with different statuses that can be seen in the JS example below:
 
 ```javascript
 tradable.on("my2fAuthListener", "twoFactorAuthentication", function(twoFactorObj) {
@@ -205,7 +209,7 @@ tradable.on("my2fAuthListener", "twoFactorAuthentication", function(twoFactorObj
     } else if(twoFactorObj.status === "failed") {
         // Something went wrong and the notification can be hidden, but the received twoFactorObj.error should be displayed
     }
-});
+}); 
 ```
 
 ###### Errors

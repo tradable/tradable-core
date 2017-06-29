@@ -1,4 +1,4 @@
-/******  Copyright 2016 Tradable ApS; @license MIT; v1.23  ******/
+/******  Copyright 2017 Tradable ApS; @license MIT; v1.24  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log !== "function" || typeof console.warn !== "function" || typeof console.error !== "function") {
@@ -45,7 +45,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.23',
+        version : '1.24',
         app_id: appId,
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
@@ -446,7 +446,11 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             var endpoint;
             if(reqType === tradable.TWO_FACTOR_AUTH) {
                 endpoint = postData.endpointURL;
-                postData = { "twoFactorAuthenticationToken" : postData.twoFactorAuthenticationToken };
+                var twoFactorData = { "twoFactorAuthenticationToken" : postData.twoFactorAuthenticationToken };
+                if(!!postData.userInput) {
+                  twoFactorData = $.extend(twoFactorData, {"userInput": postData.userInput});
+                }
+                postData = twoFactorData;
             } else if(reqType !== "user" && reqType !== "accounts") {
                 endpoint = 'https://'+tradable.oauth_host;
             } else if(accountId !== undefined && accountId !== null && accountId.length === 0) {
@@ -529,7 +533,20 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
                     deferred.resolve();
                 },
                 function(err) {
-                    if(tradable.isReLoginRequired(err)) {
+                    if(tradable.isTwoFactorAuthenticationRequired(err)) {
+                        var challengePromise = handleTwoFactorAuthenticationChallenge(err.responseJSON);
+                        if(!!challengePromise) {
+                            challengePromise.then(function() {
+                                deferred.resolve();
+                            }, function(obj) {
+                                if(obj.requiresUserInput) {
+                                    tradable.setSelectedAccount(accountId);
+                                } else {
+                                    excludeAndValidate(deferred, err);
+                                }
+                            });
+                        }
+                    } else if(tradable.isReLoginRequired(err)) {
                         tradable.reLogin().then(function () {
                             return tradable.setSelectedAccount(accountId);
                         }).then(function () {
@@ -2235,6 +2252,17 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
 
             return resolveDeferred(reloginPromise, resolve, reject);
         },
+        /**
+         * When a twoFactorAuthentication event is fired. If the received object's requiredUserInput field is true, this method will have to be called back with the user's entered two factor authentication code.
+         * @param      {String} code    Two factor authentication code entered by the user
+         */
+        submitTwoFactorAuthenticationCode : function(code) {
+            if(!!tradable.currentTwoFactorChallenge && tradable.processingTwoFactorAuthentication) {
+                makeTwoFactorAuthenticationRequest($.extend(tradable.currentTwoFactorChallenge, {"userInput": code}));
+            } else {
+                tradable.warn("submitTwoFactorAuthenticationCode was called but no two factor challenge is being handled right now.");
+            }
+        },
         enableTrading : function(access_token, end_point, expires_in, set_latest_account){
             var deferred = new $.Deferred();
 
@@ -2774,18 +2802,33 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
         FAILED : "failed"
     };
     function handleTwoFactorAuthenticationChallenge(twoFactorChallenge) {
+        var needToStartListener = false;
         if(!tradable.processingTwoFactorAuthentication) {
+            needToStartListener = true;
             tradable.processingTwoFactorAuthentication = true;
+            tradable.currentTwoFactorChallenge = twoFactorChallenge;
             tradable.log("Two factor authentication challenge received");
             notifyNamespaceCallbacks("twoFactorAuthentication", {
                 status: tradable.TWO_FACTOR_AUTH_STATUS.RECEIVED,
-                instruction: twoFactorChallenge.instruction
+                instruction: twoFactorChallenge.instruction,
+                requiresUserInput: twoFactorChallenge.requiresUserInput
             });
             if(tradable.tradingEnabled)
                 setTradingEnabled(false);
         }
 
-        tradable.makeOsRequest(tradable.TWO_FACTOR_AUTH, "POST", "", "", twoFactorChallenge).then(function (apiAuthentication) {
+        if(!twoFactorChallenge.requiresUserInput) {
+            makeTwoFactorAuthenticationRequest(twoFactorChallenge);
+        }
+
+        if(needToStartListener) {
+            return startTwoFactorInputListener();
+        }
+    }
+
+    function makeTwoFactorAuthenticationRequest(twoFactorChallenge) {
+        return tradable.makeOsRequest(tradable.TWO_FACTOR_AUTH, "POST", "", "", twoFactorChallenge).then(function (apiAuthentication) {
+            tradable.currentTwoFactorChallenge = null;
             tradable.processingTwoFactorAuthentication = false;
             tradable.log("Two factor authentication challenge passed");
             notifyNamespaceCallbacks("twoFactorAuthentication", { status: tradable.TWO_FACTOR_AUTH_STATUS.PASSED });
@@ -2794,7 +2837,29 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             } else {
                 tradable.enableTrading(tradable.accessToken, tradable.authEndpoint);
             }
+        }, function(err) {
+            if(twoFactorChallenge.requiresUserInput) {
+                tradable.currentTwoFactorChallenge = null;
+                handleTwoFactorAuthenticationFailure(err);
+            }
         });
+    }
+
+    var twoFactorAuthenticationCounter = 0;
+    function startTwoFactorInputListener() {
+        var deferred = new $.Deferred();
+        var counter = twoFactorAuthenticationCounter;
+        tradable.on("internal2fTradAuthListener"+counter, "twoFactorAuthentication", function(statusObj) {
+            if(statusObj.status === tradable.TWO_FACTOR_AUTH_STATUS.PASSED){
+                tradable.off("internal2fTradAuthListener"+counter, "twoFactorAuthentication");
+                deferred.resolve();
+            } else if(statusObj.status === tradable.TWO_FACTOR_AUTH_STATUS.FAILED){
+                tradable.off("internal2fTradAuthListener"+counter, "twoFactorAuthentication");
+                deferred.reject(statusObj.error);
+            }
+        });
+        twoFactorAuthenticationCounter += 1;
+        return deferred;
     }
 
     function handleTwoFactorAuthenticationFailure(jqXHR) {

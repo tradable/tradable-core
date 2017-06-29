@@ -201,7 +201,7 @@ QUnit.test( "Enable trading with token", function( assert ) {
 
 QUnit.test( "Authenticate with test account and an externalId", function( assert ) {
     var done = assert.async();
-    authenticateWithCredentials(done, assert, "unittestjscore3@tradable.com", "tradable", 1, "myExternalUnitTestId");
+    authenticateWithCredentials(done, assert, "testeur@grr.la", "111111Qq", 17, "myExternalUnitTestId");
 });
 
 QUnit.test( "User, AppInfo and Brokers", function( assert ) {
@@ -238,8 +238,8 @@ QUnit.test( "Get Instruments From Symbol, Brokerage Accoount Symbol and From Id"
     instrument = tradable.getInstrumentFromId(null);
     assert.ok(!instrument, "getInstrumentFromId retrieves null when symbol not valid");
 
-    instrument = tradable.getInstrumentFromBrokerageAccountSymbol(symbol);
-    assert.ok(symbol === instrument.brokerageAccountSymbol, "getInstrumentFromId");
+    instrument = tradable.getInstrumentFromBrokerageAccountSymbol("EUR_USD");
+    assert.ok("EUR_USD" === instrument.brokerageAccountSymbol, "getInstrumentFromId");
 });
 
 QUnit.test( "Get Account Snapshot updates", function( assert ) {
@@ -338,7 +338,8 @@ function placeOrder(type, amt, price, side, insId, newPrice, assert, done) {
 
         id = order.id;
         return tradable.modifyOrderPrice(id, newPrice);
-    }).then(function(){
+    }).then(function(ord){
+        id = ord.id;
         return tradable.getOrderById(id);
     }).then(function(order) {
         assert.ok(order.price === newPrice, "Order modified with price");
@@ -384,6 +385,8 @@ QUnit.test( "Close All, Place Market Order, Reduce Amount and Close", function( 
     var amt = 10000;
     tradable.closeAllPositions().then(function() {
       assert.ok(true, "Closed All Positions");
+      return waitForMillis(2000);
+    }).then(function(){
       return tradable.getPositions();
     }).then(function(positionsObj) {
       assert.ok(positionsObj.open.length === 0, "No Positions before starting test");
@@ -415,6 +418,14 @@ QUnit.test( "Close All, Place Market Order, Reduce Amount and Close", function( 
     });
 });
 
+function waitForMillis(millis) {
+    var deferred = new trEmbJQ.Deferred();
+    setTimeout(function(){
+        deferred.resolve();
+    }, millis);
+    return deferred;
+}
+
 QUnit.test( "Attach TP & SL", function( assert ) {
      var done = assert.async();
      var pos;
@@ -436,8 +447,8 @@ QUnit.test( "Attach TP & SL", function( assert ) {
      }).then(function(prices){
         assert.ok(!!prices[0], "Prices received");
 
-        tp = prices[0].ask + 0.0025;
-        sl = prices[0].bid - 0.0025;
+        tp = tradable.roundPrice(pos.instrumentId, prices[0].ask + 0.025);
+        sl = tradable.roundPrice(pos.instrumentId, prices[0].bid - 0.025);
 
         return tradable.addOrModifyProtections(pos.id, tp, sl);
     }).then(function(){
@@ -487,7 +498,7 @@ function placeProtectedOrder(assert, instrumentId, checkTPSL) {
 
     tradable.getPrices([instrumentId]).then(function (prices) {
         var bidPrice = prices[0].bid;
-        return tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", bidPrice - 0.0025, bidPrice + 0.0025, bidPrice);
+        return tradable.placeProtectedOrder(amt, 0, side, instrumentId, "MARKET", tradable.roundPrice(instrumentId, bidPrice - 0.025), tradable.roundPrice(instrumentId, bidPrice + 0.025), bidPrice);
     }).then(function (order) {
         assert.ok(!!order, 'Order with id: ' + order.id + ' received');
         assert.ok(order.side === side, "Order with side");
@@ -530,7 +541,7 @@ function modifyProtectedOrder(assert, instrumentId, checkTPSL) {
 
     tradable.getPrices([instrumentId]).then(function (prices) {
         var askPrice = prices[0].ask;
-        return tradable.placeProtectedOrder(amt, askPrice - 0.1150, side, instrumentId, "LIMIT", null, null);
+        return tradable.placeProtectedOrder(amt, tradable.roundPrice(instrumentId, askPrice - 0.1150), side, instrumentId, "LIMIT", null, null);
     }).then(function (order) {
         ord = order;
         assert.ok(!!order, 'Order with id: ' + order.id + ' received');
@@ -539,44 +550,45 @@ function modifyProtectedOrder(assert, instrumentId, checkTPSL) {
         assert.ok(!order.takeProfit, "Order without Take Profit");
         assert.ok(!order.stopLoss, "Order without Stop Loss");
 
-        return tradable.modifyProtectedOrder(ord, ord.price, ord.price + 0.0025, ord.price - 0.0025);
-    }).then(function () {
+        return tradable.modifyProtectedOrder(ord, ord.price, tradable.roundPrice(ord.instrumentId, ord.price + 0.0025), tradable.roundPrice(ord.instrumentId, ord.price - 0.0025));
+    }).then(function (modOrder) {
         assert.ok(true, "Order modified success");
-        return tradable.getOrderById(ord.id);
+        return tradable.getOrderById(modOrder.id);
     }).then(function (order) {
         assert.ok(!!order.takeProfit, "Order modified and has Take Profit");
         assert.ok(!!order.stopLoss, "Order modified and has Stop Loss");
-        return tradable.modifyProtectedOrder(ord, ord.price - 0.002, undefined, undefined);
-    }).then(function () {
+        return tradable.modifyProtectedOrder(order, order.price - 0.002, undefined, undefined);
+    }).then(function (modOrd) {
         assert.ok(true, "Order modified success");
-        return tradable.getOrderById(ord.id);
+        return tradable.getOrderById(modOrd.id);
     }).then(function (order) {
         assert.ok(!!order.takeProfit, "Order modified passing undefined and still has Take Profit");
         assert.ok(!!order.stopLoss, "Order modified passing undefined and still has Stop Loss");
-        return tradable.cancelTakeProfitOnOrder(ord.id);
-    }).then(function () {
+        return tradable.cancelTakeProfitOnOrder(order.id);
+    }).then(function (canTpOrd) {
         assert.ok(true, "TP cancelled success");
-        return tradable.getOrderById(ord.id);
+        return tradable.getOrderById(canTpOrd.id);
     }).then(function (order) {
         assert.ok((!checkTPSL || !order.takeProfit), "Take Profit on order cancelled");
-        return tradable.cancelStopLossOnOrder(ord.id);
-    }).then(function () {
+        return tradable.cancelStopLossOnOrder(order.id);
+    }).then(function (slCanOrd) {
         assert.ok(true, "SL cancelled success");
-        return tradable.getOrderById(ord.id);
+        return tradable.getOrderById(slCanOrd.id);
     }).then(function (order) {
+        ord = order;
         assert.ok((!checkTPSL || !order.stopLoss), "Stop Loss on order cancelled");
         return tradable.getPrices([instrumentId]);
     }).then(function (prices) {
         var askPrice = prices[0].ask;
-        return tradable.modifyProtectedOrder(ord, null,  ord.price + 0.0025, ord.price - 0.0025, askPrice);
-    }).then(function () {
+        return tradable.modifyProtectedOrder(ord, null,  tradable.roundPrice(ord.instrumentId, (ord.price + 0.0025)), tradable.roundPrice(ord.instrumentId, (ord.price - 0.0025)), askPrice);
+    }).then(function (ord) {
         assert.ok(true, "2- Order modified success for protections cancellation with null");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
         assert.ok(!!order.takeProfit, "2- Order modified and has Take Profit for protections cancellation with null");
         assert.ok(!!order.stopLoss, "2- Order modified and has Stop Loss for protections cancellation with null");
         return tradable.modifyProtectedOrder(order, ord.price, null, null);
-    }).then(function () {
+    }).then(function (ord) {
         assert.ok(true, "Protections cancelled with null success");
         return tradable.getOrderById(ord.id);
     }).then(function (order) {
@@ -795,11 +807,11 @@ QUnit.test("Test calculatePipSize, calculatePositionSize, calculatePositionSizeF
         tradable.calculatePositionSize(1000, false, 25, 1.15);
     }, "Invalid risk and riskIsMoney combination fails.");
 
-    var moneyToRisk = 15000;
+    var moneyToRisk = 1500;
     var stopLossPips = 25;
     var pipValue = 0.0001;
     var posSizeMoney = tradable.calculatePositionSize("EURUSD", moneyToRisk, true, stopLossPips, pipValue, 100000);
-    var posSizePerc = tradable.calculatePositionSize("EURUSD", 15, false, stopLossPips, pipValue, 100000);
+    var posSizePerc = tradable.calculatePositionSize("EURUSD", 1.5, false, stopLossPips, pipValue, 100000);
     assert.ok(posSizeMoney === posSizePerc, "Both ways of calculatePositionSize coincide " + posSizeMoney + ", " + posSizePerc);
 
     var result = (moneyToRisk / stopLossPips) / pipValue;
@@ -844,10 +856,10 @@ QUnit.test("Test roundPrice & findBandForValue", function ( assert ) {
 
     assert.ok(String(tradable.roundAmount("EURUSD", 10023.11111999999)) === "10023", "Correct rounding for EURUSD 10023.11111999999");
 
-    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7501)) === "1324.75", "Correct rounding for GoldUSD 1324.7501");
-    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7508)) === "1324.751", "Correct rounding for GoldUSD 1324.7501");
-    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7520000000001)) === "1324.752", "Correct rounding for GoldUSD 1324.7520000000001");
-    assert.ok(String(tradable.roundPrice("GoldUSD", 1324.7)) === "1324.7", "Correct rounding for GoldUSD 1324.7");
+    assert.ok(String(tradable.roundPrice("XAUUSD", 1324.7501)) === "1324.75", "Correct rounding for GoldUSD 1324.7501"); //TODO change back to GoldUSD
+    assert.ok(String(tradable.roundPrice("XAUUSD", 1324.7508)) === "1324.751", "Correct rounding for GoldUSD 1324.7501");
+    assert.ok(String(tradable.roundPrice("XAUUSD", 1324.7520000000001)) === "1324.752", "Correct rounding for GoldUSD 1324.7520000000001");
+    assert.ok(String(tradable.roundPrice("XAUUSD", 1324.7)) === "1324.7", "Correct rounding for GoldUSD 1324.7");
 
     assert.ok(tradable.roundPrice("EUSD", 1.11111) === null, "Invalid instrument returns null");
     assert.ok(tradable.roundPrice("EURUSD", "10023.111") === null, "Invalid number returns null");
