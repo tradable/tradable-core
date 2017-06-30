@@ -1,4 +1,4 @@
-/******  Copyright 2017 Tradable ApS; @license MIT; v1.24  ******/
+/******  Copyright 2017 Tradable ApS; @license MIT; v1.24.1  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log !== "function" || typeof console.warn !== "function" || typeof console.error !== "function") {
@@ -45,7 +45,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.24',
+        version : '1.24.1',
         app_id: appId,
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
@@ -943,7 +943,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }).then(function() {
                 deferred.resolve(apiAuthentication);
             }, function(error) {
-                deferred.reject(error);
+              if(tradable.isTwoFactorAuthenticationRequired(error) && error.responseJSON.requiresUserInput) {
+                  tradable.off("authenticat2fListener", "twoFactorAuthentication");
+                  tradable.on("authenticat2fListener", "twoFactorAuthentication", function(obj){
+                      if(obj.status != tradable.TWO_FACTOR_AUTH_STATUS.RECEIVED){
+                          tradable.off("authenticat2fListener", "twoFactorAuthentication");
+                      } 
+                      if(obj.status === tradable.TWO_FACTOR_AUTH_STATUS.FAILED){
+                          tradable.makeAuthenticationRequest(deferred, method, postData);
+                      }
+                  });
+                } else {
+                    deferred.reject(error);
+                }
             });
         },
         /**

@@ -942,7 +942,19 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             }).then(function() {
                 deferred.resolve(apiAuthentication);
             }, function(error) {
-                deferred.reject(error);
+              if(tradable.isTwoFactorAuthenticationRequired(error) && error.responseJSON.requiresUserInput) {
+                  tradable.off("authenticat2fListener", "twoFactorAuthentication");
+                  tradable.on("authenticat2fListener", "twoFactorAuthentication", function(obj){
+                      if(obj.status != tradable.TWO_FACTOR_AUTH_STATUS.RECEIVED){
+                          tradable.off("authenticat2fListener", "twoFactorAuthentication");
+                      } 
+                      if(obj.status === tradable.TWO_FACTOR_AUTH_STATUS.FAILED){
+                          tradable.makeAuthenticationRequest(deferred, method, postData);
+                      }
+                  });
+                } else {
+                    deferred.reject(error);
+                }
             });
         },
         /**
