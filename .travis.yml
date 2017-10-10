@@ -1,10 +1,8 @@
 language: node_js
 node_js:
-  - "0.10"
-  - "0.12"
   - "5"
   - "4.2"
-# cover around 90% of the node_js version usage
+# cover most of the node_js version usage
 # uncomment and edit the following line if your project needs to run something other than `rake`:
 script: gulp buildSDK
 before_script:
