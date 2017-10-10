@@ -1,4 +1,4 @@
-/******  Copyright 2017 Tradable ApS; @license MIT; v1.24.1  ******/
+/******  Copyright 2017 Tradable ApS; @license MIT; v1.24.2  ******/
 
 // Avoid console errors when not supported
 if (typeof console === "undefined" || typeof console.log !== "function" || typeof console.warn !== "function" || typeof console.error !== "function") {
@@ -45,7 +45,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
     * @property {Array<Object>} availableInstruments List of instruments cached in memory for the selected account. If the full instrument list is available for the selected account, all of them. Otherwise, instruments are gradually cached for the requested prices. All instruments related to to the open positions and pending orders are cached since the beginning.
     */
     var tradable = {
-        version : '1.24.1',
+        version : '1.24.2',
         app_id: appId,
         app_key: appKey,
         oauth_host: oauthEndpoint.oauthHost,
@@ -485,7 +485,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             ajaxPromise.then(function(){},
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
-                        if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
+                        if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502 || jqXHR.responseJSON.httpStatus === 503)) {
                             if(tradable.isTwoFactorAuthenticationRequired(jqXHR)) {
                                 handleTwoFactorAuthenticationChallenge(jqXHR.responseJSON);
                             } else if(tradable.isReLoginRequired(jqXHR)) {

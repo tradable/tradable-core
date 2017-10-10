@@ -484,7 +484,7 @@ var jsGlobalObject = (typeof window !== "undefined") ? window :
             ajaxPromise.then(function(){},
                 function(jqXHR){
                     if(jqXHR.responseJSON) {
-                        if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502)) {
+                        if(!tradable.initializingAccount && (jqXHR.responseJSON.httpStatus === 403 || jqXHR.responseJSON.httpStatus === 502 || jqXHR.responseJSON.httpStatus === 503)) {
                             if(tradable.isTwoFactorAuthenticationRequired(jqXHR)) {
                                 handleTwoFactorAuthenticationChallenge(jqXHR.responseJSON);
                             } else if(tradable.isReLoginRequired(jqXHR)) {
